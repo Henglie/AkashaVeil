@@ -1,0 +1,109 @@
+Ayuda de AkashaVeil (sin conexión, 0.1.0)
+
+1. Inicio rápido
+1. A la izquierda se listan ventanas o procesos. Use las pestañas para cambiar de vista y el cuadro de filtro para buscar por título, nombre de proceso o ruta.
+2. Seleccione una o varias filas y use Proteger seleccionadas o Hacer transparente la selección. Restaurar seleccionadas revierte la afinidad de pantalla aplicada por esta herramienta.
+3. Proteger todo y Restaurar todo actúan sobre todas las filas del resultado filtrado actual. El resumen bajo la lista muestra filas, filas seleccionadas y ventanas de destino.
+4. Pulse los encabezados de columna para ordenar. La lista admite selección múltiple con Ctrl/Mayús, Ctrl+A y borrado de la selección.
+5. Atajos: Ctrl+H protege; Ctrl+U restaura; Ctrl+A selecciona todo con la lista enfocada; Ctrl+S guarda el perfil; Ctrl+O carga el perfil; Ctrl+E exporta la lista; Ctrl+P preferencias; Ctrl+W Modo avanzado; Ctrl+F enfoca el filtro; Ctrl+R o F5 actualiza; Esc limpia el filtro; F1 abre esta ayuda. Tab/Mayús+Tab mueven el foco entre controles.
+6. Idioma: el menú Ajustes ofrece chino simplificado, inglés, español, francés, ruso, árabe, turco, japonés y coreano; las traducciones faltantes recurren al inglés. El árabe usa disposición de derecha a izquierda.
+
+2. Modos de protección
+- Proteger pide al sistema omitir la ventana en las rutas de captura compatibles. Windows 10 2004 y posteriores ofrecen WDA_EXCLUDEFROMCAPTURE. WDA_MONITOR de Windows 7 tiene otra semántica. La interfaz muestra el valor leído del sistema, no solo el solicitado.
+- Transparente pide al sistema hacer transparente el contenido de la ventana. El resultado depende de la versión de Windows, el renderizador y el backend de captura.
+- Restaurar solo revierte la afinidad de pantalla que esta herramienta modificó. El estado ajeno cambiado por el destino mientras estaba protegido no se sobrescribe. Las operaciones se detienen si el destino desaparece o su identidad se reutiliza.
+- Permisos de administrador: proteger ventanas de procesos elevados suele requerir ejecutar esta herramienta como administrador. Los fallos se notifican y no se muestran como protegidos.
+- Una fila fallida significa que la operación real falló. Compruebe permisos, si el destino sigue existiendo y si el sistema admite el modo elegido. Reintentar solo afecta a los objetos fallidos.
+
+3. Modo avanzado
+1. Seleccione una ventana y abra Modo avanzado. Configure contenido capturado, estilo de marca, público, texto, colores, tamaño de letra, espaciado, opacidad y marca oculta; use la vista previa antes de aplicar.
+2. Contenido capturado:
+   - Contenido original (solo marca de agua): la pantalla local y las capturas conservan el contenido original, con la marca superpuesta según el público elegido.
+   - Excluir de la captura / Transparente: pide al sistema quitar o hacer transparente el contenido original.
+   - Sustitución por color sólido / Texto de relleno: excluye el original y muestra una sustitución detrás del destino. Es una vía experimental de composición de escritorio que requiere Windows 10 2004 o posterior, DWM y una ventana de nivel superior opaca.
+3. Estilos de marca: desactivada, mosaico diagonal, centrada, esquina inferior derecha.
+4. Público:
+   - Pantalla y captura: visible localmente y en capturas de backends compatibles.
+   - Solo captura (sustituye contenido): se usa con las rutas de sustitución o exclusión; no añade texto invisible a la imagen capturada original. Para conservar el contenido dinámico original en las capturas, elija Contenido original (solo marca de agua) y fije el público en solo captura.
+5. Campos: {title}, {process}, {pid}, {time} e {id} (identificador de seguimiento local introducido por el usuario). Los identificadores permanecen locales; no se recopila ninguna huella.
+6. Ajustes predefinidos: Confidencial, Uso interno, Seguimiento, Personalizado. La vista previa permite comprobar el resultado. Cancelar no aplica nada.
+7. Las capas requieren que esta aplicación siga en ejecución. Restaurar elimina todas las capas de las ventanas seleccionadas. Salir elimina las capas pero mantiene la exclusión de captura existente; restaure después de reabrir.
+8. Límites conocidos: las capas manejan movimiento, cambio de tamaño, minimización, ocultación y oclusión normal. Pantalla completa, ventanas transparentes/especiales, varios monitores/DPI mixto, captura de ventanas, OBS y uso compartido en reuniones deben verificarse por backend. Los resultados de BitBlt de escritorio no demuestran otro backend.
+
+4. Solo captura con contenido original
+- Este modo mantiene limpia la pantalla local mientras las rutas de captura compatibles reciben el contenido dinámico original más las marcas visibles/ocultas. No inyecta en el proceso destino ni en OBS/reuniones.
+- Ruta A (captura de pantalla): capture la pantalla y componga la marca. En OBS/reuniones funciona Captura de pantalla; Captura de ventana apuntando al destino original no.
+- Ruta B (proxy de fuente de captura): la aplicación crea una ventana controlada P fuera de pantalla/oculta, captura el contenido original del destino mediante WGC y compone la marca. En OBS/reuniones, seleccione P como fuente. Si la aplicación de captura no puede listar P, B recurre a A o informa un fallo.
+- Alcance verificado: rutas A/B fuera de pantalla/con ventanas propias, conservación del contenido original, limpieza local y restauración. Pantallas reales, selección real de fuentes en OBS/reuniones, varios monitores/DPI mixto, pantalla completa, ventanas transparentes y renderizadores especiales aún requieren verificación por entorno.
+- Confirme que el destino es una ventana de nivel superior opaca y mantenga esta herramienta en ejecución. Si el destino se cierra, minimiza o pierde su identidad, la sesión se detiene y las capas se limpian.
+
+5. Marca oculta y marca local en imágenes
+- La marca oculta se escribe después de la visible y usa marcas ciegas en el dominio del píxel; no se usa ningún servicio de rastreo en línea. Hay dos algoritmos: DCT (QIM) y DWT (Haar LH3).
+- La carga útil es de 32 bytes UTF-8 como máximo. La clave es de 1-128 bytes, se usa solo en esta sesión y no se guarda en el perfil. La extracción no necesita la imagen original, pero requiere la misma clave y parámetros de protocolo.
+- Las marcas visible y oculta pueden combinarse: la misma imagen final puede mostrar la marca visible y entregar la carga oculta. Las idas y vueltas PNG/BMP/JPEG y la matriz de robustez interna pasan. La extracción desde fotogramas de captura externa real todavía no alcanza el objetivo; no confíe en extraer marcas ocultas de OBS/reuniones/capturas del sistema en esta compilación.
+- Ajustes > Marca de agua en imagen abre la herramienta local de inserción/extracción PNG/JPEG/BMP. El archivo de origen no se sobrescribe por defecto; sobrescribir requiere confirmación. Puede copiar o exportar la carga extraída. Los archivos no se suben y la carga se escribe en píxeles, no en metadatos.
+- Geometría, delta, calidad JPEG, búsqueda de mosaico/fase y parámetros relacionados manejan escalado, recorte o imágenes de origen desconocido. Mantenga los valores por defecto si no está seguro.
+
+6. Reglas, perfiles y disposición
+- Recordar seleccionadas guarda ruta, clase, título, modo y efectos como regla; aplicar reglas después hace coincidir esas condiciones.
+- Ajustes > Reglas de ventana permite añadir, editar, eliminar, activar/desactivar reglas y fijar ruta/clase/título exactos, modo, sustitución, marca visible, público, intención de barra de tareas y geometría. Las coincidencias múltiples se informan como ambiguas en lugar de elegir una al azar.
+- Aplicar protección aplica las reglas actuales. Restaurar disposición aplica solo la geometría y el estado de visualización guardados.
+- Guardar/Cargar leen y escriben perfiles. Exportar lista escribe metadatos CSV de las filas filtradas actuales.
+- Los perfiles usan schema 4 y pueden leer schema 1/2/3. Los perfiles antiguos no activan marcas de agua automáticamente; schema 1 no activa la protección en segundo plano ni cerrar a la bandeja. Un perfil dañado se rechaza en lugar de reemplazar el perfil válido actual.
+- El perfil predeterminado es %APPDATA%\AkashaVeil\profile.ini. Si existe portable.ini junto al programa, se usa ese archivo. --profile <archivo> selecciona una ruta explícita. Un directorio portable de solo lectura necesita una ubicación Guardar como escribible.
+
+7. Preferencias, bandeja y barra de tareas
+- Actualización automática: actualiza en el intervalo elegido, 100-60000 ms. No hay sondeo en segundo plano cuando no hay tareas automáticas.
+- Protección automática: hace coincidir reglas guardadas y la lista de programas para ventanas nuevas. Notificaciones, tratamiento de ventanas existentes al inicio y límite de reintentos de preparación (0-60000 ms) son configurables.
+- Bandeja: mostrar el icono, cerrar a la bandeja y ocultar el botón de la barra de tareas de esta aplicación (requiere bandeja). Solo Salir finaliza el proceso.
+- Aleatorización: título de esta ventana, icono de bandeja o tooltip de bandeja, con persistencia.
+- Barra de tareas de destino: use Ajustes > Ocultar botón de barra de tareas del destino o Restaurar botón de barra de tareas del destino en las ventanas seleccionadas. La herramienta restaura solo los bits de estilo que modificó y no sobrescribe bits ajenos.
+- Aplicar/Cancelar/Restablecer: Aplicar escribe y activa los cambios de inmediato. Cancelar conserva los cambios ya aplicados. Restablecer borra reglas guardadas, lista de programas y preferencias tras confirmación.
+
+8. Línea de comandos
+Uso:
+  AkashaVeil list [--json]
+  AkashaVeil protect|restore --process <PID> [--json]
+  AkashaVeil protect|restore --window <HWND> [--json]
+  AkashaVeil hide|unhide (alias de protect|restore)
+  AkashaVeil --version [--json]
+  AkashaVeil [--profile <file>]
+  AkashaVeil --help
+
+Comandos:
+  list, windows      Enumera ventanas de nivel superior
+  protect, hide      Excluye o hace transparente el destino de la captura
+  restore, unhide    Restaura la captura del destino
+
+Opciones:
+  --process, --pid   ID de proceso decimal positivo
+  --window, --hwnd   Identificador de ventana hexadecimal distinto de cero; prefijo 0x opcional
+  --json             Salida JSON legible por máquina; no abre la interfaz
+  --profile <file>   Perfil usado solo para el idioma de la CLI; no abre la interfaz
+  -h, --help, help   Muestra esta ayuda y sale
+  --version          Muestra la versión y sale
+
+Códigos de salida: 0 éxito, 2 sintaxis, 3 sin destino, 4 fallo parcial, 5 todo falló, 6 tiempo agotado/cancelado.
+Ejemplos:
+  AkashaVeil list --json
+  AkashaVeil protect --process 1234
+  AkashaVeil restore --window 0x00123456
+  AkashaVeil --profile .\profile.ini protect --pid 1234
+
+9. Privacidad y datos locales
+- La aplicación no se conecta a la red, no sube datos, no recopila telemetría ni huellas de dispositivos.
+- Los metadatos de ventanas/procesos y las preferencias se usan solo para gestión local. Los identificadores de seguimiento, cargas y claves se escriben solo en el perfil local, la memoria o los archivos que el usuario exporte explícitamente.
+- Las vistas previas de captura, los CSV y los perfiles usan rutas elegidas localmente por el usuario. Nada se sube automáticamente.
+
+10. Solución de problemas y compatibilidad
+- Si excluir/hacer transparente no surte efecto, identifique primero el backend. Distintas herramientas de captura usan rutas diferentes y algunas no respetan la afinidad de pantalla.
+- Si la sustitución, solo captura o la ruta B fallan, confirme la versión de Windows (la composición de escritorio requiere 10 2004+), que el destino sea una ventana de nivel superior opaca y que esta herramienta siga en ejecución.
+- Si la extracción de la marca oculta falla, confirme el mismo algoritmo, clave y geometría usados al insertar. La extracción desde captura externa real aún no pasa; vea la sección 5.
+- Si un botón de la barra de tareas de destino es incorrecto, use Restaurar botón de barra de tareas del destino. Al salir, la aplicación intenta restaurar los bits de estilo modificados en esta sesión.
+- Si un perfil está dañado o el directorio portable es de solo lectura, la aplicación se niega a reemplazar el perfil válido actual. Elija una ubicación Guardar como escribible.
+- Windows 7 solo ofrece capacidades graduadas; WDA_EXCLUDEFROMCAPTURE, WGC y algunas rutas de composición de escritorio no están disponibles. OBS/reuniones, captura del sistema, Desktop Duplication y captura de ventanas deben verificarse por separado en el entorno de destino.
+
+11. Acerca de, licencia y ayuda
+- Ajustes > Acerca de abre la ventana sin conexión con las pestañas Acerca de, Licencia, Terceros y Ayuda; F1 selecciona la pestaña Ayuda.
+- La licencia es Apache-2.0; el texto completo está en la pestaña Licencia. El apoyo es voluntario y no afecta a ninguna función. La imagen solo se integra en esta compilación de usuario; el código público no contiene rutas privadas ni datos de contacto.
+- Copiar información copia la versión, arquitectura, licencia y resumen de privacidad para comentarios; no copia claves ni cargas del usuario.

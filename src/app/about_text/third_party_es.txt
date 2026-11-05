@@ -1,0 +1,16 @@
+Componentes de terceros y avisos de licencia
+
+1. Componentes de código abierto incluidos
+Esta compilación no empaqueta ni enlaza ninguna biblioteca, fuente o recurso de imagen de código abierto de terceros. El código del programa, el texto de ayuda y el icono de marca han sido escritos, producidos o generados por este proyecto.
+
+2. Componentes del sistema Windows
+El programa utiliza componentes de Windows como User32, GDI32, GDI+, Shell32, Shlwapi, Advapi32, Dwmapi, Comctl32, Comdlg32, UxTheme, Ole32, D3D11, DXGI, Windows.Graphics.Capture, Windows Imaging Component, BCrypt y sus conjuntos de API. Forman parte del sistema operativo Windows, no se redistribuyen con este programa y se rigen por la licencia de software de Microsoft.
+
+3. Herramientas de compilación y tiempo de ejecución
+El programa se compila con la cadena de herramientas Microsoft Visual C++. El tiempo de ejecución de C/C++ se enlaza estáticamente en el EXE; no se distribuyen archivos de tiempo de ejecución separados. Los términos de redistribución del compilador y del tiempo de ejecución siguen la licencia de Microsoft.
+
+4. Obligaciones de modificación y distribución
+El código propio del proyecto se publica bajo Apache-2.0. Si distribuye archivos modificados, conserve los avisos de copyright y licencia e indique los cambios. Esta versión no incluye un archivo NOTICE; Apache-2.0 no exige un NOTICE adicional para un binario sin modificar. Si en el futuro se añaden código o recursos de terceros, deben fijarse sus versiones y fuentes, registrarse las licencias y modificaciones, y mantenerse la atribución legalmente exigida en esta página y en el código público.
+
+5. Icono y recurso de apoyo
+El icono de la aplicación es el icono de marca aprobado por el propietario del producto y está integrado en el ejecutable, las ventanas y la bandeja. La imagen de apoyo solo se integra como entrada privada en esta compilación de usuario; el código público no contiene rutas, códigos QR ni datos de contacto literales.

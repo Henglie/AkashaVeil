@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: Apache-2.0
+#pragma once
+
+// Resource identifiers used by the About/Help/Contribution entry. The
+// integration CMake script generates a matching RC file; private assets are
+// referenced only at build time and never by a source literal.
+#define IDI_AV_APP 101
+
+#define IDR_AV_ABOUT_TEXT_ZH 501
+#define IDR_AV_ABOUT_TEXT_EN 502
+#define IDR_AV_ABOUT_TEXT_ES 503
+#define IDR_AV_ABOUT_TEXT_FR 504
+#define IDR_AV_ABOUT_TEXT_RU 505
+#define IDR_AV_ABOUT_TEXT_AR 506
+#define IDR_AV_ABOUT_TEXT_TR 507
+#define IDR_AV_ABOUT_TEXT_JA 508
+#define IDR_AV_ABOUT_TEXT_KO 509
+#define IDR_AV_HELP_ZH 511
+#define IDR_AV_HELP_EN 512
+#define IDR_AV_HELP_ES 513
+#define IDR_AV_HELP_FR 514
+#define IDR_AV_HELP_RU 515
+#define IDR_AV_HELP_AR 516
+#define IDR_AV_HELP_TR 517
+#define IDR_AV_HELP_JA 518
+#define IDR_AV_HELP_KO 519
+#define IDR_AV_THIRD_PARTY_ZH 521
+#define IDR_AV_THIRD_PARTY_EN 522
+#define IDR_AV_THIRD_PARTY_ES 523
+#define IDR_AV_THIRD_PARTY_FR 524
+#define IDR_AV_THIRD_PARTY_RU 525
+#define IDR_AV_THIRD_PARTY_AR 526
+#define IDR_AV_THIRD_PARTY_TR 527
+#define IDR_AV_THIRD_PARTY_JA 528
+#define IDR_AV_THIRD_PARTY_KO 529
+#define IDR_AV_LICENSE 531
+#define IDR_AV_CONTRIBUTION_IMAGE 541
+
+#define IDC_AV_ABOUT_HEADER_ICON 1001
+#define IDC_AV_ABOUT_TITLE 1002
+#define IDC_AV_ABOUT_SUBTITLE 1003
+#define IDC_AV_ABOUT_AUTHOR 1004
+#define IDC_AV_ABOUT_TAB 1005
+#define IDC_AV_ABOUT_EDIT 1006
+#define IDC_AV_ABOUT_STATUS 1007
+#define IDC_AV_ABOUT_CONTRIBUTE 1008
+#define IDC_AV_ABOUT_COPY 1009
+#define IDC_AV_ABOUT_CLOSE 1010
+#define IDC_AV_ABOUT_REPOSITORY 1011
+#define IDC_AV_ABOUT_GITHUB 1012
+
+#define IDC_AV_CONTRIB_IMAGE 1101
+#define IDC_AV_CONTRIB_HINT 1102
+#define IDC_AV_CONTRIB_ALT 1103
+#define IDC_AV_CONTRIB_CLOSE 1104
+
+#define AV_ABOUT_SET_TAB (WM_APP + 10)
+#define AV_ABOUT_GET_TAB (WM_APP + 11)

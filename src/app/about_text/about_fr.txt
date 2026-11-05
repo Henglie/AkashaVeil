@@ -1,0 +1,23 @@
+AkashaVeil 0.1.0 est un gestionnaire local de prévention de capture de fenêtres et de filigranes pour Windows.
+
+Fonctions principales
+• Énumère les fenêtres et processus, protège ou rend transparentes les fenêtres sélectionnées et les restaure à tout moment. L'interface affiche l'état relu depuis le système.
+• Filigrane visible : mosaïque diagonale, centré ou coin inférieur droit ; texte, couleurs, taille de police, espacement et opacité réglables ; préréglages et champs {title} {process} {pid} {time} {id}.
+• Contenu d'origine (filigrane seul) : l'écran local et les captures conservent le contenu d'origine, avec le filigrane superposé selon le public choisi.
+• Remplacement : couleur unie ou texte de substitution. Comme le filigrane réservé à la capture, il s'agit d'une voie expérimentale de composition du bureau nécessitant Windows 10 2004+, DWM et une fenêtre de niveau supérieur opaque.
+• Capture seule avec contenu d'origine : la voie A capture depuis l'écran ; la voie B crée une fenêtre proxy contrôlée comme source de capture. L'écran local reste propre et aucun processus n'est injecté dans la cible ni dans l'application de capture.
+• Filigrane caché : filigranes aveugles dans le domaine pixel DCT (QIM) et DWT (Haar LH3), superposables au filigrane visible. La charge utile fait au plus 32 octets UTF-8 ; la clé fait 1-128 octets et n'est jamais enregistrée.
+• Filigrane local sur image : insertion et extraction PNG/JPEG/BMP, sans écraser la source par défaut, avec copie ou export de la charge extraite.
+• Profils : enregistrer/charger règles de fenêtres, liste de programmes, disposition et état ; édition des règles, correspondance exacte d'identité et export CSV des métadonnées.
+• Préférences : actualisation automatique, protection automatique, zone de notification, fermeture vers la zone, titre/icône/infobulle aléatoires, traitement des fenêtres existantes au démarrage et limite de nouvelle tentative de disponibilité.
+• Barre des tâches cible : masquer ou restaurer les boutons de barre des tâches des fenêtres sélectionnées, en enregistrant les bits de style modifiés par cet outil.
+• Langues : chinois simplifié, anglais, espagnol, français, russe, arabe, turc, japonais et coréen. Les traductions manquantes reviennent à l'anglais ; les systèmes en chinois traditionnel utilisent l'anglais par défaut.
+
+Confidentialité et fonctionnement local
+Tout le traitement se fait sur cet ordinateur. L'application ne se connecte pas au réseau, ne téléverse rien, ne collecte ni télémétrie ni empreinte d'appareil. Les identifiants de suivi, charges et clés saisis par l'utilisateur restent dans le profil local, la mémoire ou les fichiers exportés explicitement ; les clés de filigrane caché ne sont pas écrites dans le profil.
+
+Limites
+La protection dépend de la version de Windows, du moteur de rendu cible, des autorisations et du backend de capture réel. BitBlt du bureau, capture d'écran système, Desktop Duplication, WGC, capture de fenêtre, OBS et partage de réunion doivent être vérifiés séparément. Windows 7 ne fournit pas WDA_EXCLUDEFROMCAPTURE ; certains modes ne sont disponibles que sur les systèmes plus récents.
+
+Licence et soutien
+Le code propre du projet est sous Apache-2.0 ; le texte complet figure dans l'onglet Licence. Le soutien est volontaire et n'affecte aucune fonction. L'image n'est intégrée que dans cette compilation utilisateur ; le code public ne contient ni chemin privé ni coordonnées. Le propriétaire du produit a approuvé et intégré l'icône de marque et l'image de soutien définitives.

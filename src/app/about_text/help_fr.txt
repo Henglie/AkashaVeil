@@ -1,0 +1,109 @@
+Aide AkashaVeil (hors ligne, 0.1.0)
+
+1. Démarrage rapide
+1. La partie gauche liste les fenêtres ou processus. Utilisez les onglets pour changer de vue et le filtre pour rechercher par titre, nom de processus ou chemin.
+2. Sélectionnez une ou plusieurs lignes, puis Protéger la sélection ou Rendre la sélection transparente. Restaurer la sélection annule l'affinité d'affichage définie par cet outil.
+3. Tout protéger et Tout restaurer agissent sur toutes les lignes du résultat filtré courant. Le résumé sous la liste affiche les lignes, la sélection et les fenêtres cibles.
+4. Cliquez sur les en-têtes de colonne pour trier. La liste prend en charge la sélection multiple Ctrl/Maj, Ctrl+A et l'effacement de la sélection.
+5. Raccourcis : Ctrl+H protège ; Ctrl+U restaure ; Ctrl+A sélectionne tout lorsque la liste a le focus ; Ctrl+S enregistre le profil ; Ctrl+O charge le profil ; Ctrl+E exporte la liste ; Ctrl+P préférences ; Ctrl+W Mode avancé ; Ctrl+F place le focus sur le filtre ; Ctrl+R ou F5 actualise ; Échap efface le filtre ; F1 ouvre cette aide. Tab/Maj+Tab déplacent le focus entre les contrôles.
+6. Langue : le menu Paramètres propose chinois simplifié, anglais, espagnol, français, russe, arabe, turc, japonais et coréen ; les traductions manquantes reviennent à l'anglais. L'arabe utilise une disposition de droite à gauche.
+
+2. Modes de protection
+- Protéger demande au système d'omettre la fenêtre des voies de capture prises en charge. Windows 10 2004 et versions ultérieures fournissent WDA_EXCLUDEFROMCAPTURE. WDA_MONITOR de Windows 7 a une sémantique différente. L'interface affiche la valeur relue depuis le système, pas seulement la valeur demandée.
+- Transparente demande au système de rendre transparent le contenu de la fenêtre. Le résultat dépend de la version de Windows, du moteur de rendu et du backend de capture.
+- Restaurer n'annule que l'affinité d'affichage modifiée par cet outil. L'état non lié modifié par la cible pendant la protection n'est pas écrasé. Les opérations s'arrêtent si la cible disparaît ou si son identité est réutilisée.
+- Droits administrateur : protéger les fenêtres de processus élevés nécessite généralement d'exécuter cet outil en administrateur. Les échecs sont signalés et ne sont pas affichés comme protégés.
+- Une ligne en échec signifie que l'opération réelle a échoué. Vérifiez les autorisations, l'existence de la cible et la prise en charge du mode. Réessayer ne concerne que les objets en échec.
+
+3. Mode avancé
+1. Sélectionnez une fenêtre et ouvrez Mode avancé. Réglez le contenu capturé, le style de filigrane, le public, le texte, les couleurs, la taille de police, l'espacement, l'opacité et le filigrane caché ; utilisez l'aperçu avant d'appliquer.
+2. Contenu capturé :
+   - Contenu d'origine (filigrane seul) : l'écran local et les captures conservent le contenu d'origine, avec le filigrane superposé selon le public choisi.
+   - Exclure de la capture / Transparente : demande au système de retirer ou rendre transparent le contenu d'origine.
+   - Remplacement par couleur unie / Texte de substitution : exclut l'original et affiche un remplacement derrière la cible. Voie expérimentale de composition du bureau nécessitant Windows 10 2004 ou ultérieur, DWM et une fenêtre de niveau supérieur opaque.
+3. Styles de filigrane : désactivé, mosaïque diagonale, centré, coin inférieur droit.
+4. Public :
+   - Écran et capture : visible localement et dans les captures des backends pris en charge.
+   - Capture seule (remplace le contenu) : utilisé avec les voies de remplacement ou d'exclusion ; n'ajoute pas de texte invisible à l'image capturée d'origine. Pour conserver le contenu dynamique d'origine dans les captures, choisissez Contenu d'origine (filigrane seul) et réglez le public sur capture seule.
+5. Champs : {title}, {process}, {pid}, {time} et {id} (identifiant de suivi local saisi par l'utilisateur). Les identifiants restent locaux ; aucune empreinte n'est collectée.
+6. Préréglages : Confidentiel, Usage interne, Suivi, Personnalisé. L'aperçu permet de vérifier le résultat. Annuler n'applique rien.
+7. Les calques nécessitent que cette application reste en cours d'exécution. Restaurer supprime tous les calques des fenêtres sélectionnées. Quitter supprime les calques mais conserve l'exclusion de capture existante ; restaurez après réouverture.
+8. Limites connues : les calques gèrent déplacement, redimensionnement, réduction, masquage et occlusion ordinaire. Plein écran, fenêtres transparentes/spéciales, plusieurs écrans/DPI mixte, capture de fenêtre, OBS et partage de réunion doivent être vérifiés par backend. Les résultats BitBlt du bureau ne prouvent pas un autre backend.
+
+4. Capture seule avec contenu d'origine
+- Ce mode garde l'écran local propre tandis que les voies de capture prises en charge reçoivent le contenu dynamique d'origine et les filigranes visibles/cachés. Il n'injecte rien dans le processus cible ni dans OBS/réunions.
+- Voie A (capture d'écran) : capturez l'écran puis composez le filigrane. Dans OBS/réunions, Capture d'écran fonctionne ; Capture de fenêtre pointant vers la cible d'origine non.
+- Voie B (proxy de source de capture) : l'application crée une fenêtre P contrôlée hors écran/masquée, capture le contenu d'origine de la cible via WGC et compose le filigrane. Dans OBS/réunions, sélectionnez P comme source. Si l'application de capture ne peut pas lister P, B revient à A ou signale un échec.
+- Périmètre vérifié : voies A/B hors écran/fenêtres propres, conservation du contenu d'origine, propreté locale et restauration. Écrans réels, sélection réelle de source OBS/réunion, plusieurs écrans/DPI mixte, plein écran, fenêtres transparentes et moteurs de rendu spéciaux nécessitent encore une vérification par environnement.
+- Confirmez que la cible est une fenêtre de niveau supérieur opaque et gardez cet outil en cours d'exécution. Si la cible se ferme, est réduite ou perd son identité, la session s'arrête et les calques sont nettoyés.
+
+5. Filigrane caché et filigrane local sur image
+- Le filigrane caché est écrit après le visible et utilise des filigranes aveugles dans le domaine pixel ; aucun service de traçage en ligne n'est utilisé. Deux algorithmes : DCT (QIM) et DWT (Haar LH3).
+- La charge utile fait au plus 32 octets UTF-8. La clé fait 1-128 octets, sert uniquement à cette session et n'est pas enregistrée dans le profil. L'extraction ne nécessite pas l'image d'origine, mais exige la même clé et les mêmes paramètres de protocole.
+- Filigranes visible et caché superposables : la même image finale peut afficher le visible et fournir la charge cachée. Les allers-retours PNG/BMP/JPEG et la matrice de robustesse interne passent. L'extraction depuis de vraies trames de capture externe n'atteint pas encore l'objectif ; ne comptez pas sur l'extraction de filigranes cachés depuis OBS/réunions/captures système dans cette compilation.
+- Paramètres > Filigrane d'image ouvre l'outil local PNG/JPEG/BMP. Le fichier source n'est pas écrasé par défaut ; l'écrasement exige une confirmation. Vous pouvez copier ou exporter la charge extraite. Les fichiers ne sont pas téléversés et la charge est écrite dans les pixels, pas dans les métadonnées.
+- Géométrie, delta, qualité JPEG, recherche de tuile/phase et paramètres associés gèrent mise à l'échelle, recadrage ou images de source inconnue. Gardez les valeurs par défaut en cas de doute.
+
+6. Règles, profils et disposition
+- Mémoriser la sélection enregistre chemin, classe, titre, mode et effets comme règle ; appliquer les règles fait ensuite correspondre ces conditions.
+- Paramètres > Règles de fenêtre permet d'ajouter, modifier, supprimer, activer/désactiver des règles et de définir chemin/classe/titre exacts, mode, remplacement, filigrane visible, public, intention de barre des tâches et géométrie. Les correspondances multiples sont signalées comme ambiguës au lieu d'un choix aléatoire.
+- Appliquer la protection applique les règles actuelles. Restaurer la disposition applique uniquement la géométrie et l'état d'affichage enregistrés.
+- Enregistrer/Charger lisent et écrivent les profils. Exporter la liste écrit les métadonnées CSV des lignes filtrées courantes.
+- Les profils utilisent le schéma 4 et peuvent lire les schémas 1/2/3. Les anciens profils n'activent pas automatiquement les filigranes ; le schéma 1 n'active pas la protection en arrière-plan ni la fermeture vers la zone. Un profil corrompu est rejeté au lieu de remplacer le profil valide courant.
+- Le profil par défaut est %APPDATA%\AkashaVeil\profile.ini. Si portable.ini existe à côté du programme, ce fichier est utilisé. --profile <fichier> sélectionne un chemin explicite. Un répertoire portable en lecture seule nécessite un emplacement Enregistrer sous accessible en écriture.
+
+7. Préférences, zone de notification et barre des tâches
+- Actualisation automatique : actualise à l'intervalle choisi, 100-60000 ms. Aucune interrogation en arrière-plan sans tâche automatique.
+- Protection automatique : fait correspondre les règles enregistrées et la liste de programmes pour les nouvelles fenêtres. Notifications, traitement des fenêtres existantes au démarrage et limite de nouvelle tentative de disponibilité (0-60000 ms) sont configurables.
+- Zone de notification : afficher l'icône, fermer vers la zone et masquer le bouton de barre des tâches de cette application (nécessite la zone). Seul Quitter termine le processus.
+- Randomisation : titre de cette fenêtre, icône ou infobulle de la zone, avec persistance.
+- Barre des tâches cible : utilisez Paramètres > Masquer le bouton de barre des tâches cible ou Restaurer le bouton de barre des tâches cible sur les fenêtres sélectionnées. L'outil ne restaure que les bits de style qu'il a modifiés et n'écrase pas les bits non liés.
+- Appliquer/Annuler/Réinitialiser : Appliquer écrit et active immédiatement. Annuler conserve les changements déjà appliqués. Réinitialiser efface règles, liste de programmes et préférences après confirmation.
+
+8. Ligne de commande
+Utilisation :
+  AkashaVeil list [--json]
+  AkashaVeil protect|restore --process <PID> [--json]
+  AkashaVeil protect|restore --window <HWND> [--json]
+  AkashaVeil hide|unhide (alias de protect|restore)
+  AkashaVeil --version [--json]
+  AkashaVeil [--profile <file>]
+  AkashaVeil --help
+
+Commandes :
+  list, windows      Énumère les fenêtres de niveau supérieur
+  protect, hide      Exclut ou rend transparente la cible de la capture
+  restore, unhide    Restaure la capture de la cible
+
+Options :
+  --process, --pid   ID de processus décimal positif
+  --window, --hwnd   Handle de fenêtre hexadécimal non nul ; préfixe 0x facultatif
+  --json             Sortie JSON lisible par machine ; aucune interface ouverte
+  --profile <file>   Profil utilisé uniquement pour la langue de la CLI ; aucune interface ouverte
+  -h, --help, help   Affiche cette aide et quitte
+  --version          Affiche la version et quitte
+
+Codes de sortie : 0 succès, 2 syntaxe, 3 aucune cible, 4 échec partiel, 5 tout a échoué, 6 délai/annulation.
+Exemples :
+  AkashaVeil list --json
+  AkashaVeil protect --process 1234
+  AkashaVeil restore --window 0x00123456
+  AkashaVeil --profile .\profile.ini protect --pid 1234
+
+9. Confidentialité et données locales
+- L'application ne se connecte pas au réseau, ne téléverse rien, ne collecte ni télémétrie ni empreinte d'appareil.
+- Les métadonnées de fenêtres/processus et les préférences servent uniquement à la gestion locale. Les identifiants de suivi, charges et clés ne sont écrits que dans le profil local, la mémoire ou les fichiers exportés explicitement.
+- Les aperçus de capture, CSV et profils utilisent des chemins choisis localement. Rien n'est téléversé automatiquement.
+
+10. Dépannage et compatibilité
+- Si exclure/rendre transparent est sans effet, identifiez d'abord le backend. Les outils de capture utilisent des voies différentes et certains ne respectent pas l'affinité d'affichage.
+- Si le remplacement, la capture seule ou la voie B échoue, vérifiez la version de Windows (composition du bureau : 10 2004+), que la cible est une fenêtre de niveau supérieur opaque et que l'outil tourne encore.
+- Si l'extraction du filigrane caché échoue, vérifiez le même algorithme, la même clé et la même géométrie qu'à l'insertion. L'extraction depuis une capture externe réelle n'est pas encore validée ; voir section 5.
+- Si un bouton de barre des tâches cible est incorrect, utilisez Restaurer le bouton de barre des tâches cible. À la sortie, l'application tente de restaurer les bits de style modifiés pendant la session.
+- Si un profil est corrompu ou le répertoire portable en lecture seule, l'application refuse de remplacer le profil valide. Choisissez un emplacement Enregistrer sous accessible en écriture.
+- Windows 7 n'offre que des capacités graduées ; WDA_EXCLUDEFROMCAPTURE, WGC et certaines voies de composition du bureau sont indisponibles. OBS/réunions, capture système, Desktop Duplication et capture de fenêtre doivent être vérifiés séparément dans l'environnement cible.
+
+11. À propos, licence et aide
+- Paramètres > À propos ouvre la fenêtre hors ligne avec les onglets À propos, Licence, Tiers et Aide ; F1 sélectionne l'onglet Aide.
+- La licence est Apache-2.0 ; le texte complet figure dans l'onglet Licence. Le soutien est volontaire et n'affecte aucune fonction. L'image n'est intégrée que dans cette compilation utilisateur ; le code public ne contient ni chemin privé ni coordonnées.
+- Copier les informations copie la version, l'architecture, la licence et le résumé de confidentialité pour les retours ; aucune clé ni charge utilisateur n'est copiée.

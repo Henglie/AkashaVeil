@@ -1,0 +1,109 @@
+AkashaVeil yardımı (çevrimdışı, 0.1.0)
+
+1. Hızlı başlangıç
+1. Solda pencereler veya süreçler listelenir. Görünümü sekmelerle değiştirin; başlık, süreç adı veya yola göre filtreleyin.
+2. Bir veya daha fazla satır seçin, ardından "Seçilenleri koru" veya "Seçilenleri saydam yap" kullanın. "Seçilenleri geri yükle" bu aracın ayarladığı görüntü ilişkisini geri alır.
+3. "Tümünü koru" ve "Tümünü geri yükle" geçerli filtrelenmiş sonucun tüm satırlarına uygulanır. Listenin altındaki özet satırları, seçimi ve hedef pencereleri gösterir.
+4. Sıralamak için sütun başlıklarına tıklayın. Liste Ctrl/Shift çoklu seçim, Ctrl+A ve seçimi temizlemeyi destekler.
+5. Kısayollar: Ctrl+H koru; Ctrl+U geri yükle; liste odaktayken Ctrl+A tümünü seç; Ctrl+S profili kaydet; Ctrl+O profil yükle; Ctrl+E listeyi dışa aktar; Ctrl+P tercihler; Ctrl+W Gelişmiş mod; Ctrl+F filtreye odaklan; Ctrl+R veya F5 yenile; Esc filtreyi temizle; F1 bu yardımı açar. Tab/Shift+Tab denetimler arasında gezinir.
+6. Dil: Ayarlar menüsü Basitleştirilmiş Çince, İngilizce, İspanyolca, Fransızca, Rusça, Arapça, Türkçe, Japonca ve Korece sunar; eksik çeviriler İngilizceye döner. Arapça sağdan sola düzen kullanır.
+
+2. Koruma kipleri
+- "Koru" sistemden pencereyi desteklenen yakalama yollarından çıkarmasını ister. Windows 10 2004 ve üzeri WDA_EXCLUDEFROMCAPTURE sağlar. Windows 7'deki WDA_MONITOR farklı anlamdadır. Arayüz yalnızca istenen değeri değil sistemden okunan değeri gösterir.
+- "Saydam yap" sistemden pencere içeriğini saydam yapmasını ister. Sonuç Windows sürümüne, oluşturucuya ve yakalama arka ucuna bağlıdır.
+- "Geri yükle" yalnızca bu aracın değiştirdiği görüntü ilişkisini geri alır. Hedefin koruma sırasında değiştirdiği ilgisiz durum üzerine yazılmaz. Hedef kaybolursa veya kimliği yeniden kullanılırsa işlemler durur.
+- Yönetici hakları: yükseltilmiş süreçlerin pencerelerini korumak genellikle aracı yönetici olarak çalıştırmayı gerektirir. Hatalar bildirilir ve korunmuş gibi gösterilmez.
+- Başarısız satır gerçek işlemin başarısız olduğu anlamına gelir. İzinleri, hedefin varlığını ve kip desteğini kontrol edin. Yeniden deneme yalnızca başarısız nesneleri etkiler.
+
+3. Gelişmiş mod
+1. Bir pencere seçip "Gelişmiş mod"u açın. Yakalanan içeriği, filigran stilini, kitleyi, metni, renkleri, yazı boyutunu, aralığı, opaklığı ve gizli filigranı ayarlayın; uygulamadan önce önizlemeyi kullanın.
+2. Yakalanan içerik:
+   - Özgün içerik (yalnızca filigran): yerel ekran ve yakalamalar özgün içeriği korur; filigran seçilen kitleye göre çizilir.
+   - Yakalamadan hariç tut / Saydam yap: sistemden özgün içeriği kaldırmasını veya saydam yapmasını ister.
+   - Düz renk değiştirme / Metin yer tutucu: özgünü hariç tutar ve hedefin arkasında bir değiştirme gösterir. Windows 10 2004 veya üzeri, DWM ve opak üst düzey pencere gerektiren deneysel masaüstü kompozisyonu yoludur.
+3. Filigran stilleri: kapalı, çapraz döşeme, ortalanmış, sağ alt.
+4. Kitle:
+   - Ekran ve yakalama: yerelde ve desteklenen arka uçların yakalamalarında görünür.
+   - Yalnızca yakalama (içeriği değiştirir): değiştirme veya hariç tutma yollarıyla kullanılır; özgün yakalanan görüntüye görünmez metin eklemez. Yakalamalarda özgün dinamik içeriği korumak için "Özgün içerik (yalnızca filigran)" seçin ve kitleyi yalnızca yakalama yapın.
+5. Alanlar: {title}, {process}, {pid}, {time} ve {id} (kullanıcının girdiği yerel izleme kimliği). Kimlikler yerelde kalır; parmak izi toplanmaz.
+6. Ön ayarlar: Gizli, Dahili kullanım, İzleme, Özel. Önizleme sonucu gösterir. İptal hiçbir şey uygulamaz.
+7. Katmanlar uygulamanın çalışmaya devam etmesini gerektirir. "Geri yükle" seçilen pencerelerin tüm katmanlarını kaldırır. Çıkış katmanları kaldırır ancak mevcut yakalama hariç tutmasını korur; yeniden açtıktan sonra geri yükleyin.
+8. Bilinen sınırlar: katmanlar taşıma, boyutlandırma, simge durumuna küçültme, gizleme ve normal örtüşmeyi işler. Tam ekran, saydam/özel pencereler, çoklu monitör/karma DPI, pencere yakalama, OBS ve toplantı paylaşımı arka uç başına doğrulanmalıdır. Masaüstü BitBlt sonuçları başka bir arka ucu kanıtlamaz.
+
+4. Özgün içerikle yalnızca yakalama
+- Bu kip yerel ekranı temiz tutarken desteklenen yakalama yollarına özgün dinamik içeriği ve görünür/gizli filigranları verir. Hedefe veya OBS/toplantı süreçlerine enjeksiyon yapmaz.
+- A yolu (ekran yakalama): ekranı yakalayıp filigranı oluşturun. OBS/toplantılarda "Ekran Yakalama" çalışır; özgün hedefe yönelik "Pencere Yakalama" çalışmaz.
+- B yolu (yakalama kaynağı vekili): uygulama ekran dışı/gizli kontrollü P penceresi oluşturur, WGC ile hedefin özgün içeriğini yakalar ve filigranı oluşturur. OBS/toplantılarda P'yi kaynak seçin. Yakalama uygulaması P'yi listeleyemezse B, A'ya döner veya hata bildirir.
+- Doğrulanan kapsam: ekran dışı/kendi pencereli A/B yolları, özgün içeriğin korunması, yerel temizlik ve geri yükleme. Gerçek ekranlar, gerçek OBS/toplantı kaynak seçimi, çoklu monitör/karma DPI, tam ekran, saydam pencereler ve özel oluşturucular ortam başına doğrulama gerektirir.
+- Hedefin opak üst düzey pencere olduğundan emin olun ve aracı çalışır tutun. Hedef kapanır, küçülür veya kimliğini kaybederse oturum durur ve katmanlar temizlenir.
+
+5. Gizli filigran ve yerel görüntü filigranı
+- Gizli filigran görünürden sonra yazılır ve piksel alanı kör filigranı kullanır; çevrimiçi izleme hizmeti kullanılmaz. DCT (QIM) ve DWT (Haar LH3) mevcuttur.
+- Yük en fazla 32 UTF-8 baytıdır. Anahtar 1-128 bayttır, yalnızca bu oturumda kullanılır ve profile kaydedilmez. Çıkarma özgün görüntüyü gerektirmez ancak aynı anahtar ve protokol parametrelerini gerektirir.
+- Görünür ve gizli filigranlar birleştirilebilir: aynı nihai görüntü görünür filigranı gösterir ve gizli yükü verir. PNG/BMP/JPEG gidiş-dönüşleri ve iç dayanıklılık matrisi geçer. Gerçek dış yakalama karelerinden çıkarma henüz hedefi karşılamıyor; bu derlemede OBS/toplantı/sistem ekran görüntülerinden gizli filigran çıkarmaya güvenmeyin.
+- "Ayarlar > Görüntü filigranı" yerel PNG/JPEG/BMP aracını açar. Kaynak dosya varsayılan olarak üzerine yazılmaz; üzerine yazma onay gerektirir. Çıkarılan yükü kopyalayabilir veya dışa aktarabilirsiniz. Dosyalar yüklenmez ve yük meta verilere değil piksellere yazılır.
+- Geometri, delta, JPEG kalitesi, döşeme/faz araması ve ilgili parametreler ölçekleme, kırpma veya bilinmeyen kaynaklı görüntüleri işler. Emin değilseniz varsayılanları koruyun.
+
+6. Kurallar, profiller ve düzen
+- "Seçilenleri hatırla" yol, sınıf, başlık, kip ve efektleri kural olarak kaydeder; kuralları uygulamak bu koşullarla eşleştirir.
+- "Ayarlar > Pencere kuralları" kuralları ekleme, düzenleme, silme, etkinleştirme/devre dışı bırakma ve tam yol/sınıf/başlık, kip, değiştirme, görünür filigran, kitle, görev çubuğu niyeti ve geometri ayarlamayı sağlar. Birden çok eşleşme rastgele seçmek yerine belirsiz olarak bildirilir.
+- "Korumayı uygula" geçerli kuralları uygular. "Düzeni geri yükle" yalnızca kayıtlı geometri ve gösterim durumunu uygular.
+- "Kaydet/Yükle" profilleri okur ve yazar. "Listeyi dışa aktar" geçerli filtrelenmiş satırların CSV üst verisini yazar.
+- Profiller schema 4 kullanır ve schema 1/2/3 okuyabilir. Eski profiller filigranları otomatik açmaz; schema 1 arka plan korumasını veya tepsiye kapatmayı açmaz. Bozuk profil geçerli profilin yerine geçirilmez, reddedilir.
+- Varsayılan profil %APPDATA%\AkashaVeil\profile.ini. Programın yanında portable.ini varsa o kullanılır. --profile <dosya> açık yol seçer. Salt okunur portable dizin yazılabilir bir "Farklı Kaydet" konumu gerektirir.
+
+7. Tercihler, tepsi ve görev çubuğu
+- Otomatik yenileme: seçilen aralıkta 100-60000 ms yeniler. Otomatik görev yokken arka plan anketi çalışmaz.
+- Otomatik koruma: yeni pencereler için kayıtlı kurallar ve program listesiyle eşleşir. Bildirimler, başlangıçta mevcut pencereleri işleme ve hazır olma yeniden deneme sınırı (0-60000 ms) yapılandırılabilir.
+- Tepsi: simgeyi göster, tepsiye kapat ve bu uygulamanın görev çubuğu düğmesini gizle (tepsi gerekir). Süreci yalnızca açık "Çıkış" sonlandırır.
+- Rastgeleleştirme: pencere başlığı, tepsi simgesi veya tepsi ipucu; ayar kalıcıdır.
+- Hedef görev çubuğu: seçilen pencerelerde "Ayarlar > Hedef görev çubuğu düğmesini gizle" veya "Hedef görev çubuğu düğmesini geri yükle" kullanın. Araç yalnızca değiştirdiği stil bitlerini geri yükler ve ilgisiz bitlerin üzerine yazmaz.
+- Uygula/İptal/Sıfırla: Uygula hemen yazar ve etkinleştirir. İptal uygulananları korur. Sıfırla onaydan sonra kuralları, program listesini ve tercihleri temizler.
+
+8. Komut satırı
+Kullanım:
+  AkashaVeil list [--json]
+  AkashaVeil protect|restore --process <PID> [--json]
+  AkashaVeil protect|restore --window <HWND> [--json]
+  AkashaVeil hide|unhide (protect|restore takma adları)
+  AkashaVeil --version [--json]
+  AkashaVeil [--profile <file>]
+  AkashaVeil --help
+
+Komutlar:
+  list, windows      Üst düzey pencereleri listeler
+  protect, hide      Hedefi yakalamadan hariç tutar veya saydam yapar
+  restore, unhide    Hedefin yakalamasını geri yükler
+
+Seçenekler:
+  --process, --pid   Pozitif ondalık süreç kimliği
+  --window, --hwnd   Sıfır olmayan onaltılık pencere tanıtıcısı; 0x öneki isteğe bağlı
+  --json             Makine tarafından okunabilir JSON çıktısı; arayüz açılmaz
+  --profile <file>   Yalnızca CLI dili için profil; arayüz açılmaz
+  -h, --help, help   Bu yardımı göster ve çık
+  --version          Sürümü göster ve çık
+
+Çıkış kodları: 0 başarı, 2 sözdizimi, 3 hedef yok, 4 kısmi hata, 5 tümü başarısız, 6 zaman aşımı/iptal.
+Örnekler:
+  AkashaVeil list --json
+  AkashaVeil protect --process 1234
+  AkashaVeil restore --window 0x00123456
+  AkashaVeil --profile .\profile.ini protect --pid 1234
+
+9. Gizlilik ve yerel veriler
+- Uygulama ağa bağlanmaz, veri yüklemez, telemetri veya cihaz parmak izi toplamaz.
+- Pencere/süreç üst verileri ve tercihler yalnızca yerel yönetim için kullanılır. İzleme kimlikleri, yükler ve anahtarlar yalnızca yerel profile, belleğe veya açıkça dışa aktarılan dosyalara yazılır.
+- Yakalama önizlemeleri, CSV ve profiller kullanıcının yerelde seçtiği yolları kullanır. Otomatik yükleme yoktur.
+
+10. Sorun giderme ve uyumluluk
+- Hariç tutma/saydam yapma etkisizse önce arka ucu belirleyin. Farklı yakalama araçları farklı yollar kullanır ve bazıları görüntü ilişkisine uymaz.
+- Değiştirme, yalnızca yakalama veya B yolu başarısızsa Windows sürümünü (masaüstü kompozisyonu 10 2004+), hedefin opak üst düzey pencere olduğunu ve aracın çalıştığını doğrulayın.
+- Gizli filigran çıkarma başarısızsa gömme ile aynı algoritma, anahtar ve geometriyi doğrulayın. Gerçek dış yakalamadan çıkarma henüz geçmiyor; bkz. bölüm 5.
+- Hedef görev çubuğu düğmesi yanlışsa "Hedef görev çubuğu düğmesini geri yükle" kullanın. Çıkışta uygulama oturumda değiştirilen stil bitlerini geri yüklemeye çalışır.
+- Profil bozuksa veya portable dizin salt okunursa uygulama geçerli profili değiştirmeyi reddeder. Yazılabilir bir "Farklı Kaydet" konumu seçin.
+- Windows 7 yalnızca kademeli yetenekler sunar; WDA_EXCLUDEFROMCAPTURE, WGC ve bazı masaüstü kompozisyonu yolları kullanılamaz. OBS/toplantılar, sistem ekran görüntüsü, Desktop Duplication ve pencere yakalama hedef ortamda ayrı doğrulanmalıdır.
+
+11. Hakkında, lisans ve yardım
+- "Ayarlar > Hakkında" çevrimdışı pencereyi Hakkında, Lisans, Üçüncü taraf ve Yardım sekmeleriyle açar; F1 yardım sekmesini seçer.
+- Lisans Apache-2.0'dır; tam metin Lisans sekmesindedir. Destek isteğe bağlıdır ve hiçbir özelliği etkilemez. Görüntü yalnızca bu kullanıcı derlemesine gömülür; genel kod özel yol veya iletişim içermez.
+- "Bilgileri kopyala" sürüm, mimari, lisans ve gizlilik özetini geri bildirim için kopyalar; anahtar veya kullanıcı yükü kopyalamaz.

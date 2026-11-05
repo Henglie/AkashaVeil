@@ -1,0 +1,23 @@
+AkashaVeil 0.1.0, Windows için yerel bir pencere yakalama önleme ve filigran yöneticisidir.
+
+Ana yetenekler
+• Pencereleri ve süreçleri listeler, seçilen pencereleri korur veya saydam yapar ve istendiğinde geri yükler. Arayüz sistemden okunan durumu gösterir.
+• Görünür filigran: çapraz döşeme, ortalanmış veya sağ alt köşe; ayarlanabilir metin, renkler, yazı boyutu, aralık ve opaklık; ön ayarlar ve {title} {process} {pid} {time} {id} alanları.
+• Özgün içerik (yalnızca filigran): yerel ekran ve yakalamalar özgün içeriği korur; filigran seçilen kitleye göre çizilir.
+• Değiştirme: düz renk veya metin yer tutucu. Yalnızca yakalama filigranı gibi, Windows 10 2004+, DWM ve opak üst düzey pencere gerektiren deneysel bir masaüstü kompozisyon yoludur.
+• Özgün içerikle yalnızca yakalama: A yolu ekrandan yakalar; B yolu kontrollü bir yakalama kaynağı vekil penceresi oluşturur. Yerel ekran temiz kalır ve hedefe veya yakalama uygulamasına süreç enjekte edilmez.
+• Gizli filigran: DCT (QIM) ve DWT (Haar LH3) piksel alanı kör filigranları, görünür filigranla birleştirilebilir. Yük en fazla 32 UTF-8 baytıdır; anahtar 1-128 bayttır ve asla kaydedilmez.
+• Yerel görüntü filigranı: PNG/JPEG/BMP için gömme ve çıkarma, kaynak varsayılan olarak üzerine yazılmaz, çıkarılan yük kopyalanabilir veya dışa aktarılabilir.
+• Profiller: pencere kuralları, program listesi, düzen ve durumu kaydetme/yükleme; kural düzenleme, tam kimlik eşleştirme ve CSV üst veri dışa aktarma.
+• Tercihler: otomatik yenileme, otomatik koruma, tepsi, tepsiye kapatma, rastgele başlık/simge/ipucu, başlangıçta mevcut pencereleri işleme ve hazır olma yeniden deneme sınırı.
+• Hedef görev çubuğu: seçilen pencereler için görev çubuğu düğmelerini gizleme veya geri yükleme; bu aracın değiştirdiği stil bitlerini kaydeder.
+• Diller: Basitleştirilmiş Çince, İngilizce, İspanyolca, Fransızca, Rusça, Arapça, Türkçe, Japonca ve Korece. Eksik çeviriler İngilizceye döner; Geleneksel Çince sistemler varsayılan olarak İngilizce kullanır.
+
+Gizlilik ve yerellik
+Tüm işleme bu bilgisayarda yapılır. Uygulama ağa bağlanmaz, veri yüklemez, telemetri veya cihaz parmak izi toplamaz. Kullanıcının girdiği izleme kimlikleri, yükler ve anahtarlar yerel profilde, bellekte veya kullanıcının açıkça dışa aktardığı dosyalarda kalır; gizli filigran anahtarları profile yazılmaz.
+
+Sınırlar
+Koruma Windows sürümüne, hedef oluşturucuya, izinlere ve gerçek yakalama arka ucuna bağlıdır. Masaüstü BitBlt, sistem ekran görüntüsü, Desktop Duplication, WGC, pencere yakalama, OBS ve toplantı paylaşımı ayrı ayrı doğrulanmalıdır. Windows 7 WDA_EXCLUDEFROMCAPTURE sağlamaz; bazı kipler yalnızca daha yeni sistemlerde kullanılabilir.
+
+Lisans ve destek
+Projenin kendi kodu Apache-2.0 altındadır; tam metin Lisans sekmesindedir. Destek isteğe bağlıdır ve hiçbir özelliği etkilemez. Görüntü yalnızca bu kullanıcı derlemesine gömülür; genel kaynak kod özel yol veya iletişim bilgisi içermez. Ürün sahibi nihai marka simgesini ve destek görüntüsünü onaylayıp entegre etmiştir.

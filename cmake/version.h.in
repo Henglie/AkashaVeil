@@ -1,0 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
+#pragma once
+#define AV_VERSION L"@PROJECT_VERSION@"
+#define AV_ARCH L"@AV_ARCH@"

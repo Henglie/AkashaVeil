@@ -1,0 +1,23 @@
+AkashaVeil 0.1.0 es un gestor local de prevención de captura de ventanas y marcas de agua para Windows.
+
+Capacidades principales
+• Enumera ventanas y procesos, protege o hace transparentes las ventanas seleccionadas y las restaura en cualquier momento. La interfaz muestra el estado leído del sistema.
+• Marca de agua visible: mosaico diagonal, centrada o en la esquina inferior derecha; texto, colores, tamaño de letra, espaciado y opacidad ajustables; ajustes predefinidos y campos {title} {process} {pid} {time} {id}.
+• Contenido original (solo marca de agua): la pantalla local y las capturas conservan el contenido original, con la marca superpuesta según el público elegido.
+• Sustitución: color sólido o texto de relleno. Igual que la marca solo para captura, es una vía experimental de composición de escritorio que requiere Windows 10 2004+, DWM y una ventana de nivel superior opaca.
+• Solo captura con contenido original: la ruta A captura desde la pantalla; la ruta B crea una ventana proxy controlada como fuente de captura. La pantalla local permanece limpia y no se inyecta ningún proceso en el destino ni en la aplicación de captura.
+• Marca de agua oculta: marcas ciegas en el dominio del píxel DCT (QIM) y DWT (Haar LH3), combinables con la marca visible. La carga útil es de 32 bytes UTF-8 como máximo; la clave es de 1-128 bytes y nunca se guarda.
+• Marca de agua local en imágenes: inserción y extracción para PNG/JPEG/BMP, sin sobrescribir el origen por defecto, con copia o exportación de la carga extraída.
+• Perfiles: guardar/cargar reglas de ventanas, lista de programas, disposición y estado; edición de reglas, coincidencia exacta de identidad y exportación de metadatos CSV.
+• Preferencias: actualización automática, protección automática, bandeja, cerrar a la bandeja, título/icono/tooltip aleatorios, tratamiento de ventanas existentes al inicio y límite de reintentos de preparación.
+• Barra de tareas de destino: ocultar o restaurar botones de la barra de tareas para las ventanas seleccionadas, registrando los bits de estilo modificados por esta herramienta.
+• Idiomas: chino simplificado, inglés, español, francés, ruso, árabe, turco, japonés y coreano. Las traducciones faltantes recurren al inglés; los sistemas en chino tradicional usan inglés por defecto.
+
+Privacidad y funcionamiento local
+Todo el procesamiento ocurre en este equipo. La aplicación no se conecta a la red, no sube datos, no recopila telemetría ni huellas de dispositivos. Los identificadores de seguimiento, cargas y claves introducidos por el usuario permanecen en el perfil local, la memoria o los archivos que el usuario exporte; las claves de marca oculta no se escriben en el perfil.
+
+Límites
+La protección depende de la versión de Windows, el renderizador del destino, los permisos y el backend de captura real. BitBlt de escritorio, captura de pantalla del sistema, Desktop Duplication, WGC, captura de ventanas, OBS y uso compartido en reuniones deben verificarse por separado. Windows 7 no ofrece WDA_EXCLUDEFROMCAPTURE; algunos modos solo están disponibles en sistemas más recientes.
+
+Licencia y apoyo
+El código propio del proyecto es Apache-2.0; el texto completo está en la pestaña Licencia. El apoyo es voluntario y no afecta a ninguna función. La imagen solo se integra en esta compilación de usuario; el código público no contiene rutas privadas ni datos de contacto. El propietario del producto ha aprobado e integrado el icono de marca y la imagen de apoyo definitivos.

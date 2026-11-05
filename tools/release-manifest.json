@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "repository": "Henglie/AkashaVeil",
+  "versionSource": "CMakeLists.txt",
+  "sourceRoots": [
+    ".gitattributes", ".gitignore", "CMakeLists.txt", "CMakePresets.json",
+    "LICENSE", "README.md", "README_EN.md", "CHANGELOG.md", "CONTRIBUTING.md",
+    "介绍文章.md", "发布清单.md", "src", "cmake", "docs",
+    "tools/build.ps1", "tools/package.ps1", "tools/verify-release.ps1",
+    "tools/release-common.ps1", "tools/release-manifest.json"
+  ],
+  "bundleRoots": [
+    "LICENSE", "README.md", "README_EN.md", "CHANGELOG.md", "CONTRIBUTING.md", "介绍文章.md", "发布清单.md", "docs"
+  ],
+  "architectures": [
+    {"name": "x86", "machine": 332, "file": "AkashaVeil-x86.exe", "source": "build/standalone/AkashaVeil-x86.exe"},
+    {"name": "x64", "machine": 34404, "file": "AkashaVeil-x64.exe", "source": "build/standalone/AkashaVeil-x64.exe"},
+    {"name": "arm64", "machine": 43620, "file": "AkashaVeil-arm64.exe", "source": "build/standalone/AkashaVeil-arm64.exe"}
+  ],
+  "forbiddenSourcePaths": [
+    "(?i)(^|/)(internal|tests|research|研究|资料|build|dist|output|local|授权|[.]git|[.]vs|[.]idea|[.]claude|[.]opencode|[.]workbuddy-ai)(/|$)",
+    "(?i)(^|/)(progress|agents|claude)[.]md$",
+    "(?i)(^|/).*prompt.*[.](md|txt)$",
+    "(?i)[.](exe|dll|pdb|obj|lib|ilk|log|tmp|ini|csv|user|pyc|pfx|pem|key)$",
+    "(?i)(^|/)(license[.]bin|启动.*|多Agent协作[.]md)$"
+  ],
+  "forbiddenTextPatterns": [
+    "(?i)[A-Z]:.{1,2}Users.{1,2}Administrator.{1,2}",
+    "(?i)gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}",
+    "-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
+  ]
+}

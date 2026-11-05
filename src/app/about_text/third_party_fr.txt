@@ -1,0 +1,16 @@
+Composants tiers et mentions de licence
+
+1. Composants open source intégrés
+Cette compilation n'embarque ni ne lie aucune bibliothèque, police ou ressource image open source tierce. Le code du programme, le texte d'aide et l'icône de marque sont écrits, produits ou générés par ce projet.
+
+2. Composants du système Windows
+Le programme utilise des composants Windows tels que User32, GDI32, GDI+, Shell32, Shlwapi, Advapi32, Dwmapi, Comctl32, Comdlg32, UxTheme, Ole32, D3D11, DXGI, Windows.Graphics.Capture, Windows Imaging Component, BCrypt et leurs ensembles d'API. Ils font partie du système d'exploitation Windows, ne sont pas redistribués avec ce programme et relèvent de la licence logicielle Microsoft.
+
+3. Outils de compilation et exécution
+Le programme est compilé avec la chaîne d'outils Microsoft Visual C++. Le runtime C/C++ est lié statiquement à l'EXE ; aucun fichier de runtime séparé n'est distribué. Les conditions de redistribution du compilateur et du runtime suivent la licence Microsoft.
+
+4. Obligations de modification et de distribution
+Le code propre du projet est publié sous Apache-2.0. Si vous distribuez des fichiers modifiés, conservez les mentions de copyright et de licence et indiquez les modifications. Cette version n'a pas de fichier NOTICE ; Apache-2.0 n'exige pas de NOTICE supplémentaire pour un binaire non modifié. Si du code ou des ressources tierces sont ajoutés ultérieurement, leurs versions et sources doivent être figées, les licences et modifications consignées, et l'attribution légalement requise conservée sur cette page et dans le code public.
+
+5. Icône et ressource de soutien
+L'icône de l'application est l'icône de marque approuvée par le propriétaire du produit et est intégrée à l'exécutable, aux fenêtres et à la zone de notification. L'image de soutien n'est intégrée que comme entrée privée dans cette compilation utilisateur ; le code public ne contient ni chemin, ni QR code, ni coordonnées littérales.

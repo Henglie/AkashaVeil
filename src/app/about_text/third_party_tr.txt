@@ -1,0 +1,16 @@
+Üçüncü taraf bileşenler ve lisans bildirimleri
+
+1. Paketlenen üçüncü taraf açık kaynak bileşenler
+Bu derleme herhangi bir üçüncü taraf açık kaynak kitaplık, yazı tipi veya görsel kaynak paketlemez veya bağlamaz. Program kodu, yardım metni ve marka simgesi bu proje tarafından yazılmış, üretilmiş veya oluşturulmuştur.
+
+2. Windows sistem bileşenleri
+Program User32, GDI32, GDI+, Shell32, Shlwapi, Advapi32, Dwmapi, Comctl32, Comdlg32, UxTheme, Ole32, D3D11, DXGI, Windows.Graphics.Capture, Windows Imaging Component, BCrypt ve API kümelerini kullanır. Bunlar Windows işletim sisteminin parçasıdır, bu programla yeniden dağıtılmaz ve Microsoft yazılım lisansına tabidir.
+
+3. Derleme araçları ve çalışma zamanı
+Program Microsoft Visual C++ araç zinciriyle derlenir. C/C++ çalışma zamanı EXE'ye statik olarak bağlanır; ayrı çalışma zamanı dosyaları dağıtılmaz. Derleyici ve çalışma zamanı yeniden dağıtım koşulları Microsoft lisansına uyar.
+
+4. Değişiklik ve dağıtım yükümlülükleri
+Projenin kendi kodu Apache-2.0 altında yayımlanır. Değiştirilmiş dosyaları dağıtırsanız telif ve lisans bildirimlerini koruyun ve değişiklikleri belirtin. Bu sürümde NOTICE dosyası yoktur; Apache-2.0 değiştirilmemiş bir ikili için ek NOTICE gerektirmez. Gelecekte üçüncü taraf kod veya kaynak eklenirse sürümleri ve kaynakları sabitlenmeli, lisanslar ve değişiklikler kaydedilmeli ve yasal olarak gerekli atıf bu sayfada ve genel kaynak kodda korunmalıdır.
+
+5. Simge ve destek kaynağı
+Uygulama simgesi ürün sahibinin onayladığı marka simgesidir ve EXE, pencereler ve tepsiye entegre edilmiştir. Destek görüntüsü yalnızca bu kullanıcı derlemesinde özel bir girdi olarak gömülür; genel kaynak kod yol, QR kod veya iletişim bilgisi içermez.

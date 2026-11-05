@@ -1,0 +1,109 @@
+AkashaVeil help (offline, 0.1.0)
+
+1. Quick start
+1. The left side lists windows or processes. Use the tabs to switch views and the filter box to match title, process name, or path.
+2. Select one or more rows, then use Protect selected or Transparent selected. Restore selected removes the display affinity set by this tool.
+3. Protect all and Restore all act on every row in the current filtered result. The summary below the list shows rows, selected rows, and target windows.
+4. Click column headers to sort. The list supports Ctrl/Shift multi-selection, Ctrl+A, and clearing the selection.
+5. Shortcuts: Ctrl+H protect; Ctrl+U restore; Ctrl+A select all (list focus); Ctrl+S save profile; Ctrl+O load profile; Ctrl+E export list; Ctrl+P preferences; Ctrl+W advanced mode; Ctrl+F focus the filter; Ctrl+R or F5 refresh; Esc clears the filter; F1 opens this help. Tab/Shift+Tab move focus between controls.
+6. Language: the Settings menu offers Simplified Chinese, English, Spanish, French, Russian, Arabic, Turkish, Japanese, and Korean; missing translations fall back to English. Arabic uses a right-to-left layout.
+
+2. Protection modes
+- Protect asks the system to omit the window from supported capture paths. Windows 10 2004 and later provide WDA_EXCLUDEFROMCAPTURE. Windows 7's WDA_MONITOR has different semantics. The UI shows the value read back from the system, not just the requested value.
+- Transparent asks the system to make the window content transparent. The result depends on the Windows version, renderer, and capture backend.
+- Restore only reverts display affinity that this tool changed. Unrelated state changed by the target while protected is not overwritten. Operations stop when the target disappears or its identity is reused.
+- Administrator rights: protecting windows of elevated processes usually requires running this tool as administrator. Failures are reported and are not shown as protected.
+- A failed row means the actual operation failed. Check permissions, whether the target still exists, and whether the system supports the selected mode. Retry only affects failed objects.
+
+3. Advanced mode
+1. Select a window and open Advanced mode. Set captured content, watermark style, audience, text, colors, font size, spacing, opacity, and hidden watermark; use the preview before applying.
+2. Captured content:
+   - Original content (watermark only): the local screen and captured frames keep the original content, with the watermark drawn according to the selected audience.
+   - Exclude from capture / Transparent: ask the system to remove or make transparent the original content.
+   - Solid color replacement / Text placeholder: excludes the original and shows a replacement behind the target. This is an experimental desktop-composition path that requires Windows 10 2004 or later, DWM, and an opaque top-level window.
+3. Watermark styles: off, diagonal tiles, centered, bottom-right.
+4. Audience:
+   - Screen and capture: visible locally and in captures from supported backends.
+   - Capture only (replaces content): used with replacement or exclusion routes; it does not invisibly add text to the original captured image. To keep the original dynamic content in captures, choose Original content (watermark only) and set the audience to capture only.
+5. Fields: {title}, {process}, {pid}, {time}, and {id} (a local tracking ID entered by the user). IDs stay local; no fingerprint is collected.
+6. Presets: Confidential, Internal use, Tracking, Custom. The preview and capture preview let you inspect the result. Cancel applies nothing.
+7. Layers require this application to stay running. Restore removes all layers for the selected windows. Exiting removes layers but keeps existing capture exclusion; restore later after reopening.
+8. Known limits: layers handle movement, resizing, minimizing, hiding, and ordinary occlusion. Full screen, transparent/special windows, multiple monitors/mixed DPI, window capture, OBS, and meeting sharing must be verified per backend. Desktop BitBlt results do not prove another backend.
+
+4. Capture-only with original content
+- This mode keeps the local screen clean while supported capture paths receive the original dynamic content plus visible/hidden watermarks. It does not inject into the target process or into OBS/meeting processes.
+- Route A (display capture): capture the display, then compose the watermark. In OBS/meetings, Display Capture works; Window Capture pointed at the original target does not.
+- Route B (capture-source proxy): the application creates an off-screen/occluded controlled capture-source window P, captures the target's original content through WGC, and composes the watermark. In OBS/meetings, select P as the capture source. If the capture application cannot list P, B falls back to A or reports failure.
+- Verified scope: off-screen/self-built-window A/B routes, original-content preservation, local cleanliness, and restore. Real displays, actual OBS/meeting source selection, multiple monitors/mixed DPI, full screen, transparent windows, and special renderers still require per-environment verification.
+- Confirm that the target is an opaque top-level window and keep this tool running. When the target closes, minimizes, or loses identity, the session stops and layers are cleaned up.
+
+5. Hidden watermark and local image watermark
+- The hidden watermark is written after the visible watermark and uses pixel-domain blind watermarking; no online tracing service is used. Two algorithms are available: DCT (QIM) and DWT (Haar LH3).
+- The payload is at most 32 UTF-8 bytes. The key is 1-128 bytes, used only for this session, and is not saved to the profile. Extraction needs no original image, but requires the same key and protocol parameters.
+- Visible and hidden watermarks can be stacked: the same final image can show the visible watermark and yield the hidden payload. PNG/BMP/JPEG round trips and the internal robustness matrix pass. Extraction from actual external capture frames has not yet met the target; do not rely on extracting hidden watermarks from OBS/meeting/system screenshots in this build.
+- Settings > Image watermark opens the local PNG/JPEG/BMP embed/extract tool. The source file is not overwritten by default; overwrite requires confirmation. You can copy or export the extracted payload. Files are not uploaded, and the payload is written into pixels, not file metadata.
+- Geometry, delta, JPEG quality, tile/phase search, and related parameters handle scaling, cropping, or images from unknown sources. Keep the defaults when unsure.
+
+6. Rules, profiles, and layout
+- Remember selected stores path, class, title, mode, and effects as a rule; applying rules later matches those conditions.
+- Settings > Window rules lets you add, edit, delete, enable/disable rules, and set exact path/class/title, mode, replacement, visible watermark, audience, taskbar intent, and geometry. Multiple matches are reported as ambiguous instead of randomly choosing one.
+- Apply protection applies current rules. Restore layout applies saved geometry/show state only.
+- Save/Load read and write profiles. Export list writes CSV metadata for the current filtered rows.
+- Profiles use schema 4 and can read schema 1/2/3. Older profiles do not auto-enable watermarks; schema 1 does not auto-enable background protection or close-to-tray. A corrupt profile is rejected instead of replacing the current valid profile.
+- The default profile is %APPDATA%\AkashaVeil\profile.ini. If portable.ini exists next to the program, that file is used. --profile <file> selects an explicit path. A read-only portable directory needs a writable Save As location.
+
+7. Preferences, tray, and taskbar
+- Automatic refresh: refresh at the selected interval, 100-60000 ms. No background polling runs when there is no automatic task.
+- Auto protection: matches saved rules and the program list for new windows. Notifications, startup handling of existing windows, and the readiness retry limit (0-60000 ms) are configurable.
+- Tray: show the tray icon, close to tray, and hide this application's taskbar button (requires the tray). Only explicit Exit ends the process.
+- Randomization: randomize this window's title, the tray icon, or the tray tooltip, and persist the setting.
+- Target taskbar: use Settings > Hide target taskbar button or Restore target taskbar button on selected windows. The tool restores only the style bits it changed and does not overwrite unrelated bits.
+- Apply/Cancel/Reset: Apply writes and activates changes immediately. Cancel keeps changes already applied. Reset clears saved rules, the program list, and preferences after confirmation.
+
+8. Command line
+Usage:
+  AkashaVeil list [--json]
+  AkashaVeil protect|restore --process <PID> [--json]
+  AkashaVeil protect|restore --window <HWND> [--json]
+  AkashaVeil hide|unhide (aliases of protect|restore)
+  AkashaVeil --version [--json]
+  AkashaVeil [--profile <file>]
+  AkashaVeil --help
+
+Commands:
+  list, windows      Enumerate top-level windows
+  protect, hide      Exclude or make transparent the target from capture
+  restore, unhide    Restore capture for the target
+
+Options:
+  --process, --pid   Positive decimal process ID
+  --window, --hwnd   Nonzero hexadecimal window handle; 0x prefix is optional
+  --json             Machine-readable JSON output; no GUI is opened
+  --profile <file>   Profile used for CLI language only; no GUI is opened
+  -h, --help, help   Show this help and exit
+  --version          Show the version and exit
+
+Exit codes: 0 success, 2 syntax, 3 no target, 4 partial failure, 5 all failed, 6 timeout/cancelled.
+Examples:
+  AkashaVeil list --json
+  AkashaVeil protect --process 1234
+  AkashaVeil restore --window 0x00123456
+  AkashaVeil --profile .\profile.ini protect --pid 1234
+
+9. Privacy and local data
+- The application does not connect to the network, upload data, collect telemetry, or collect device fingerprints.
+- Window/process metadata and preferences are used only for local management. Tracking IDs, payloads, and keys are written only to the local profile, memory, or files the user explicitly exports.
+- Capture previews, CSV files, and profiles use paths chosen locally by the user. Nothing is uploaded automatically.
+
+10. Troubleshooting and compatibility
+- If protect/transparent has no effect, identify the backend first. Different screenshot and recording tools use different capture paths, and some do not honor display affinity.
+- If replacement, capture-only, or route B fails, confirm the Windows version (desktop composition requires 10 2004+), that the target is an opaque top-level window, and that this tool is still running.
+- If hidden-watermark extraction fails, confirm the same algorithm, key, and geometry used for embedding. Extraction from actual external capture is not yet passing; see section 5.
+- If a target taskbar button is wrong, use Restore target taskbar button. On exit the application attempts to restore style bits changed in this session.
+- If a profile is corrupt or the portable directory is read-only, the application refuses to replace the current valid profile. Choose a writable Save As location.
+- Windows 7 only provides graded capabilities; WDA_EXCLUDEFROMCAPTURE, WGC, and some desktop-composition paths are unavailable. OBS/meetings, system screenshot, Desktop Duplication, and window capture must be verified separately in the target environment.
+
+11. About, license, and help
+- Settings > About opens the offline About window with About, License, Third party, and Help tabs; F1 selects the Help tab.
+- The license is Apache-2.0; the full text is on the License tab. Support is voluntary and does not affect any feature. The image is embedded only in this user build; public source contains no private paths or contact information.
+- Copy info copies the version, architecture, license, and privacy summary for feedback; it does not copy keys or user payloads.

@@ -1,0 +1,23 @@
+AkashaVeil 0.1.0 is a local Windows window capture-prevention and watermark manager.
+
+Main capabilities
+• Enumerate windows and processes, protect or make transparent the selected windows, and restore them at any time. The UI shows the state read back from the system.
+• Visible watermark: diagonal tiles, centered, or bottom-right; adjustable text, colors, font size, spacing, and opacity; presets and {title} {process} {pid} {time} {id} fields.
+• Original content (watermark only): the local screen and captured frames keep the original content, with the watermark drawn according to the selected audience.
+• Replacement: solid color or text placeholder. Like capture-only watermarking, this is an experimental desktop-composition path that requires Windows 10 2004+, DWM, and an opaque top-level window.
+• Capture-only with original content: route A captures from the display; route B creates a controlled capture-source proxy window. The local screen stays clean and no process is injected into the target or capture application.
+• Hidden watermark: DCT (QIM) and DWT (Haar LH3) pixel-domain blind watermarks, stackable with the visible watermark. Payload is at most 32 UTF-8 bytes; the key is 1-128 bytes and is never saved.
+• Local image watermark: embed and extract for PNG/JPEG/BMP, never overwrite the source by default, and copy or export the extracted payload.
+• Profiles: save/load window rules, program list, layout, and state; rule editing, exact identity matching, and CSV metadata export.
+• Preferences: automatic refresh, auto protection, tray, close to tray, randomized title/icon/tooltip, startup handling of existing windows, and a readiness retry limit.
+• Target taskbar: hide or restore taskbar buttons for selected windows while recording the style bits changed by this tool.
+• Languages: Simplified Chinese, English, Spanish, French, Russian, Arabic, Turkish, Japanese, and Korean. Missing translations fall back to English; Traditional Chinese systems default to English.
+
+Privacy and locality
+All processing stays on this computer. The application does not connect to the network, upload data, collect telemetry, or collect device fingerprints. User-entered tracking IDs, payloads, and keys stay in the local profile, memory, or files the user explicitly exports; hidden-watermark keys are not written to the profile.
+
+Boundaries
+Protection depends on the Windows version, the target renderer, permissions, and the actual capture backend. Desktop BitBlt, system screenshot, Desktop Duplication, WGC, window capture, OBS, and meeting sharing must be verified separately. Results on one backend do not prove another. Windows 7 does not provide WDA_EXCLUDEFROMCAPTURE; some modes are only available on newer systems.
+
+License and support
+The project's own code is Apache-2.0; the full text is on the License tab. Support is voluntary and does not affect any feature. The image is embedded only in this user build; public source contains no private paths or contact information. The product owner has approved and integrated the final brand icon and contribution image.
