@@ -1,4 +1,6 @@
-AkashaVeil help (offline, 0.1.0)
+AkashaVeil help (offline)
+
+Advanced options have four groups: capture content, visible watermark, hidden watermark, output/preview. Enable visible and hidden additions independently, combine them, and choose their audience separately. Image tools open on extraction with automatic alignment; advanced parameters are collapsed.
 
 1. Quick start
 1. The left side lists windows or processes. Use the tabs to switch views and the filter box to match title, process name, or path.
@@ -38,9 +40,11 @@ AkashaVeil help (offline, 0.1.0)
 - Confirm that the target is an opaque top-level window and keep this tool running. When the target closes, minimizes, or loses identity, the session stops and layers are cleaned up.
 
 5. Hidden watermark and local image watermark
-- The hidden watermark is written after the visible watermark and uses pixel-domain blind watermarking; no online tracing service is used. Two algorithms are available: DCT (QIM) and DWT (Haar LH3).
+- Hidden watermarking runs after visible composition and uses transform-domain blind watermarking, without online tracing. Algorithms: R-DCT, DCT (QIM), and DWT (Haar LH3).
+- R-DCT adds a distributed keyed pilot, byte-local spatial interleaving, soft decisions, and RS errors/erasures correction. Embedding needs at least 256x256 pixels. The default strength 24 maps to data/pilot steps 64/48. More robustness adds fine texture; absolute invisibility is not guaranteed.
+- For cropped R-DCT images, enable tile and pixel-phase search. Resized images need original width/height and a non-1 scale in the geometry field. R-DCT sync scores are 0-1000, legacy scores 0-32. Arbitrary scale/perspective is not estimated automatically; camera recapture, print/scan, and arbitrary rotation are not guaranteed.
 - The payload is at most 32 UTF-8 bytes. The key is 1-128 bytes, used only for this session, and is not saved to the profile. Extraction needs no original image, but requires the same key and protocol parameters.
-- Visible and hidden watermarks can be stacked: the same final image can show the visible watermark and yield the hidden payload. PNG/BMP/JPEG round trips and the internal robustness matrix pass. Extraction from actual external capture frames has not yet met the target; do not rely on extracting hidden watermarks from OBS/meeting/system screenshots in this build.
+- Visible and hidden marks can be combined. Local files and a controlled framed-window desktop screenshot -> GUI extraction workflow are verified. Capture the screen or selected proxy output; direct target capture may omit overlays. Arbitrary OBS/meeting video, camera recapture and transformations are not guaranteed.
 - Settings > Image watermark opens the local PNG/JPEG/BMP embed/extract tool. The source file is not overwritten by default; overwrite requires confirmation. You can copy or export the extracted payload. Files are not uploaded, and the payload is written into pixels, not file metadata.
 - Geometry, delta, JPEG quality, tile/phase search, and related parameters handle scaling, cropping, or images from unknown sources. Keep the defaults when unsure.
 
@@ -98,7 +102,7 @@ Examples:
 10. Troubleshooting and compatibility
 - If protect/transparent has no effect, identify the backend first. Different screenshot and recording tools use different capture paths, and some do not honor display affinity.
 - If replacement, capture-only, or route B fails, confirm the Windows version (desktop composition requires 10 2004+), that the target is an opaque top-level window, and that this tool is still running.
-- If hidden-watermark extraction fails, confirm the same algorithm, key, and geometry used for embedding. Extraction from actual external capture is not yet passing; see section 5.
+- If extraction finds no watermark, check the key, capture source and original pixel size. Try cropping to the target without resizing. Tile and pixel-phase search are enabled by default; scale hints are under Advanced parameters.
 - If a target taskbar button is wrong, use Restore target taskbar button. On exit the application attempts to restore style bits changed in this session.
 - If a profile is corrupt or the portable directory is read-only, the application refuses to replace the current valid profile. Choose a writable Save As location.
 - Windows 7 only provides graded capabilities; WDA_EXCLUDEFROMCAPTURE, WGC, and some desktop-composition paths are unavailable. OBS/meetings, system screenshot, Desktop Duplication, and window capture must be verified separately in the target environment.

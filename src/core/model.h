@@ -17,7 +17,7 @@ struct Effects {
     std::wstring text = L"CONFIDENTIAL\n{id}  {time}", label = L"Protected content", tag;
     unsigned opacity = 45, font_size = 22, spacing = 240;
     unsigned foreground = 0xE0E0E0, background = 0x282828;
-    // Hidden watermark (DCT=1, DWT=2).  The key is deliberately not part of
+    // Hidden watermark (DCT=1, DWT=2, R-DCT=3). The key is deliberately not part of
     // the persisted model; callers supply it for each session or file job.
     unsigned hidden_algorithm = 0;
     std::wstring hidden_payload;

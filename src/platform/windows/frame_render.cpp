@@ -43,6 +43,7 @@ namespace {
 constexpr DWORD kCaptureOnlyWda = 0x11;
 constexpr wchar_t kOwnerClass[] = L"Henglie.AkashaVeil.CaptureOnlyOwner";
 constexpr wchar_t kLayerClass[] = L"Henglie.AkashaVeil.CaptureOnlyLayer";
+constexpr UINT kPresentFrame=WM_APP+71;
 
 std::wstring win32_text(DWORD code) {
     if (code == 0) return L"";
@@ -256,6 +257,7 @@ struct CaptureOnlyRenderSession::Impl {
     std::thread capture_thread;
     std::atomic<bool> stop_requested{false};
     std::atomic<bool> capture_done{false};
+    std::atomic<bool> repaint_queued{false};
     std::mutex start_mutex;
     std::condition_variable start_cv;
     bool start_done = false;
@@ -274,6 +276,17 @@ struct CaptureOnlyRenderSession::Impl {
 
     static LRESULT CALLBACK owner_proc(HWND hwnd, UINT message, WPARAM wparam,
         LPARAM lparam) {
+        auto* self=reinterpret_cast<Impl*>(GetWindowLongPtrW(hwnd,GWLP_USERDATA));
+        if (message==WM_NCCREATE) {
+            self=static_cast<Impl*>(reinterpret_cast<CREATESTRUCTW*>(lparam)->lpCreateParams);
+            SetWindowLongPtrW(hwnd,GWLP_USERDATA,reinterpret_cast<LONG_PTR>(self));
+        }
+        if (message==kPresentFrame && self) {
+            self->repaint_queued.store(false,std::memory_order_release);
+            if (self->capture && IsWindowVisible(self->capture)) self->paint_layers(false);
+            return 0;
+        }
+        if (message==WM_NCDESTROY) SetWindowLongPtrW(hwnd,GWLP_USERDATA,0);
         return DefWindowProcW(hwnd, message, wparam, lparam);
     }
 
@@ -393,14 +406,15 @@ struct CaptureOnlyRenderSession::Impl {
     bool create_layers(std::wstring& detail) {
         if (!register_classes(detail)) return false;
         owner = CreateWindowExW(0, kOwnerClass, L"", WS_POPUP, -6000, -6000,
-            1, 1, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+            1, 1, nullptr, nullptr, GetModuleHandleW(nullptr), this);
         if (!owner) {
             detail = L"owner window creation failed: " +
                 win32_text(GetLastError());
             return false;
         }
         auto* capture_data = new LayerContext{this, true};
-        capture = CreateWindowExW(WS_EX_TRANSPARENT, kLayerClass, L"", WS_POPUP,
+        const DWORD layer_style=WS_EX_TRANSPARENT|WS_EX_LAYERED|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW;
+        capture = CreateWindowExW(layer_style, kLayerClass, L"", WS_POPUP,
             -5000, -5000, 320, 240, owner, nullptr,
             GetModuleHandleW(nullptr), capture_data);
         if (!capture) {
@@ -411,7 +425,7 @@ struct CaptureOnlyRenderSession::Impl {
         }
         capture_context = capture_data;
         auto* clean_data = new LayerContext{this, false};
-        clean = CreateWindowExW(WS_EX_TRANSPARENT, kLayerClass, L"", WS_POPUP,
+        clean = CreateWindowExW(layer_style, kLayerClass, L"", WS_POPUP,
             -5000, -5000, 320, 240, owner, nullptr,
             GetModuleHandleW(nullptr), clean_data);
         if (!clean) {
@@ -421,6 +435,11 @@ struct CaptureOnlyRenderSession::Impl {
             return false;
         }
         clean_context = clean_data;
+        if (!SetLayeredWindowAttributes(capture,0,255,LWA_ALPHA)
+            || !SetLayeredWindowAttributes(clean,0,255,LWA_ALPHA)) {
+            detail=L"mirror transparency initialization failed: "+win32_text(GetLastError());
+            return false;
+        }
         return true;
     }
 
@@ -490,11 +509,26 @@ struct CaptureOnlyRenderSession::Impl {
     }
 
     void place_layers(int x, int y, int w, int h) {
-        SetWindowPos(capture,
-            reinterpret_cast<HWND>(status.target.handle), x, y, w, h,
-            SWP_NOACTIVATE | SWP_SHOWWINDOW);
-        SetWindowPos(clean, capture, x, y, w, h,
-            SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        const HWND target=reinterpret_cast<HWND>(status.target.handle);
+        const bool top=(GetWindowLongPtrW(target,GWL_EXSTYLE)&WS_EX_TOPMOST)!=0;
+        for (HWND layer : {capture,clean}) {
+            const bool layer_top=(GetWindowLongPtrW(layer,GWL_EXSTYLE)&WS_EX_TOPMOST)!=0;
+            if (layer_top!=top) SetWindowPos(layer,top?HWND_TOPMOST:HWND_NOTOPMOST,0,0,0,0,
+                SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+        }
+        HWND before=GetWindow(target,GW_HWNDPREV);
+        while (before==capture || before==clean) before=GetWindow(before,GW_HWNDPREV);
+        if (!before || (!top && (GetWindowLongPtrW(before,GWL_EXSTYLE)&WS_EX_TOPMOST)))
+            before=top?HWND_TOPMOST:HWND_TOP;
+        // InsertAfter means BELOW the anchor. The required order is
+        // clean (excluded locally) > watermarked > original target.
+        if (config.capture_only) {
+            SetWindowPos(clean,before,x,y,w,h,SWP_NOACTIVATE|SWP_SHOWWINDOW);
+            SetWindowPos(capture,clean,x,y,w,h,SWP_NOACTIVATE|SWP_SHOWWINDOW);
+        } else {
+            ShowWindow(clean,SW_HIDE);
+            SetWindowPos(capture,before,x,y,w,h,SWP_NOACTIVATE|SWP_SHOWWINDOW);
+        }
     }
 
     void force_present(HWND hwnd) {
@@ -600,6 +634,9 @@ struct CaptureOnlyRenderSession::Impl {
                 }
                 self->status.stats = self->pipeline->stats();
                 self->status.backend = self->pipeline->backend_selection();
+                if (!self->repaint_queued.exchange(true,std::memory_order_acq_rel)) {
+                    if (!PostMessageW(self->owner,kPresentFrame,0,0)) self->repaint_queued=false;
+                }
             } else if (result == FramePipeline::NextResult::timeout) {
                 self->update_stats_from_pipeline();
             } else if (result == FramePipeline::NextResult::cancelled) {
@@ -657,9 +694,11 @@ bool CaptureOnlyRenderSession::start(const CaptureOnlyRenderConfig& config,
         return false;
     }
     impl_->config = config;
+    impl_->config.pipeline.window_client_only=true;
     impl_->config.pipeline.source.window = target;
     impl_->stop_requested = false;
     impl_->capture_done = false;
+    impl_->repaint_queued=false;
     impl_->start_done = false;
     impl_->start_ok = false;
     impl_->start_error = {};
@@ -669,6 +708,10 @@ bool CaptureOnlyRenderSession::start(const CaptureOnlyRenderConfig& config,
     impl_->height = 0;
     impl_->dpi = 96;
     {
+        std::lock_guard<std::mutex> lock(impl_->store.mutex);
+        impl_->store.latest={};impl_->store.has_frame=false;impl_->store.generation=0;
+    }
+    {
         std::lock_guard<std::mutex> lock(impl_->status_mutex);
         impl_->status = {};
         impl_->status.state = RenderSessionState::starting;
@@ -677,7 +720,7 @@ bool CaptureOnlyRenderSession::start(const CaptureOnlyRenderConfig& config,
         impl_->config.pipeline.target = impl_->status.target;
         impl_->status.hidden_requested = config.pipeline.hidden.enabled;
         impl_->status.hidden_status = config.pipeline.hidden.enabled
-            ? L"pending_t13_t14" : L"disabled";
+            ? L"pending" : L"disabled";
         DWORD affinity = 0;
         if (GetWindowDisplayAffinity(target, &affinity)) {
             impl_->status.target_affinity_known = true;
@@ -697,7 +740,8 @@ bool CaptureOnlyRenderSession::start(const CaptureOnlyRenderConfig& config,
         return false;
     }
 
-    if (!SetWindowDisplayAffinity(impl_->clean, kCaptureOnlyWda)) {
+    const DWORD required_affinity=config.capture_only ? kCaptureOnlyWda : 0;
+    if (config.capture_only && !SetWindowDisplayAffinity(impl_->clean, required_affinity)) {
         const DWORD code = GetLastError();
         detail = L"SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE) failed: " +
             win32_text(code);
@@ -715,7 +759,7 @@ bool CaptureOnlyRenderSession::start(const CaptureOnlyRenderConfig& config,
     }
     DWORD clean_affinity = 0;
     if (!GetWindowDisplayAffinity(impl_->clean, &clean_affinity) ||
-        clean_affinity != kCaptureOnlyWda) {
+        clean_affinity != required_affinity) {
         detail = L"clean layer WDA read-back is not 0x11";
         impl_->destroy_layers();
         std::lock_guard<std::mutex> lock(impl_->status_mutex);
@@ -729,7 +773,7 @@ bool CaptureOnlyRenderSession::start(const CaptureOnlyRenderConfig& config,
     {
         std::lock_guard<std::mutex> lock(impl_->status_mutex);
         impl_->status.clean_affinity = clean_affinity;
-        impl_->status.clean_layer_excluded = true;
+        impl_->status.clean_layer_excluded = config.capture_only;
         impl_->status.owner_layer =
             reinterpret_cast<std::uintptr_t>(impl_->owner);
         impl_->status.capture_layer =
@@ -881,7 +925,7 @@ void CaptureOnlyRenderSession::sync() {
 
     DWORD affinity = 0;
     const bool affinity_ok = GetWindowDisplayAffinity(impl_->clean, &affinity) != FALSE;
-    if (!affinity_ok || affinity != kCaptureOnlyWda) {
+    if (impl_->config.capture_only && (!affinity_ok || affinity != kCaptureOnlyWda)) {
         if (!SetWindowDisplayAffinity(impl_->clean, kCaptureOnlyWda)) {
             const DWORD code = GetLastError();
             std::lock_guard<std::mutex> lock(impl_->status_mutex);
@@ -917,7 +961,7 @@ void CaptureOnlyRenderSession::sync() {
     if (!IsWindowVisible(impl_->capture)) {
         ShowWindow(impl_->capture, SW_SHOWNOACTIVATE);
     }
-    if (!IsWindowVisible(impl_->clean)) {
+    if (impl_->config.capture_only && !IsWindowVisible(impl_->clean)) {
         ShowWindow(impl_->clean, SW_SHOWNOACTIVATE);
     }
     impl_->paint_layers(false);

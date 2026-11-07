@@ -3,6 +3,7 @@
 
 #include "av/watermark/dct.h"
 #include "av/watermark/dwt.h"
+#include "av/watermark/robust.h"
 
 #include <algorithm>
 #include <climits>
@@ -68,6 +69,7 @@ const BlindWatermarkEmbedder* find_embedder(
     const HiddenEmbedderSet& embedders, std::uint16_t algorithm) {
     if (algorithm == kHiddenAlgorithmDctPairQim) return embedders.dct.get();
     if (algorithm == kHiddenAlgorithmDwtLh3Qim) return embedders.dwt.get();
+    if (algorithm == kHiddenAlgorithmRobustDct) return embedders.robust.get();
     return nullptr;
 }
 
@@ -76,9 +78,10 @@ bool validate_hidden(const WatermarkPlan& plan,
     const HiddenWatermarkOptions& hidden = plan.hidden_layer;
     if (!hidden.enabled) return true;
     if (hidden.algorithm != kHiddenAlgorithmDctPairQim &&
-        hidden.algorithm != kHiddenAlgorithmDwtLh3Qim) {
+        hidden.algorithm != kHiddenAlgorithmDwtLh3Qim &&
+        hidden.algorithm != kHiddenAlgorithmRobustDct) {
         error = make_error(CompositionError::Domain::unsupported, 10,
-            L"hidden watermark algorithm must be DCT (1) or DWT (2)");
+            L"hidden watermark algorithm must be DCT (1), DWT (2) or R-DCT (3)");
         return false;
     }
     if (hidden.packet.format_version != 1 ||
@@ -126,9 +129,7 @@ bool validate_hidden(const WatermarkPlan& plan,
         hidden.algorithm);
     if (!embedder || !embedder->available()) {
         error = make_error(CompositionError::Domain::unsupported, 18,
-            hidden.algorithm == kHiddenAlgorithmDctPairQim
-                ? L"DCT embedder is not registered; refusing to silently drop the hidden payload"
-                : L"DWT embedder is not registered; refusing to silently drop the hidden payload");
+            L"selected hidden embedder is not registered; refusing to silently drop the hidden payload");
         return false;
     }
     return true;
@@ -214,6 +215,7 @@ const wchar_t* hidden_algorithm_name(std::uint16_t algorithm) noexcept {
     switch (algorithm) {
     case kHiddenAlgorithmDctPairQim: return L"dct_qim";
     case kHiddenAlgorithmDwtLh3Qim: return L"dwt_lh3_qim";
+    case kHiddenAlgorithmRobustDct: return L"robust_dct";
     default: return L"none";
     }
 }
@@ -295,6 +297,7 @@ WatermarkFrameComposer::WatermarkFrameComposer() : impl_(std::make_unique<Impl>(
     impl_->cancel = std::make_shared<std::atomic<bool>>(false);
     impl_->embedders.dct = make_dct_embedder(impl_->cancel);
     impl_->embedders.dwt = make_dwt_embedder(impl_->cancel);
+    impl_->embedders.robust = make_robust_embedder(impl_->cancel);
 }
 
 WatermarkFrameComposer::WatermarkFrameComposer(HiddenEmbedderSet embedders,
@@ -386,6 +389,7 @@ std::shared_ptr<BlindWatermarkEmbedder> WatermarkFrameComposer::embedder_for(
     std::uint16_t algorithm) const {
     if (algorithm == kHiddenAlgorithmDctPairQim) return impl_->embedders.dct;
     if (algorithm == kHiddenAlgorithmDwtLh3Qim) return impl_->embedders.dwt;
+    if (algorithm == kHiddenAlgorithmRobustDct) return impl_->embedders.robust;
     return {};
 }
 
@@ -542,9 +546,10 @@ bool WatermarkFrameComposer::extract(const ImageBuffer& image,
         return false;
     }
     if (algorithm != kHiddenAlgorithmDctPairQim &&
-        algorithm != kHiddenAlgorithmDwtLh3Qim) {
+        algorithm != kHiddenAlgorithmDwtLh3Qim &&
+        algorithm != kHiddenAlgorithmRobustDct) {
         error = make_error(CompositionError::Domain::unsupported, 61,
-            L"extraction algorithm must be DCT (1) or DWT (2)");
+            L"extraction algorithm must be DCT (1), DWT (2) or R-DCT (3)");
         result.status = HiddenExtractionStatus::unsupported_algorithm;
         result.detail = L"unsupported algorithm";
         return false;
@@ -557,17 +562,20 @@ bool WatermarkFrameComposer::extract(const ImageBuffer& image,
         return false;
     }
 
-    if (algorithm == kHiddenAlgorithmDctPairQim) {
+    if (algorithm == kHiddenAlgorithmDctPairQim || algorithm == kHiddenAlgorithmRobustDct) {
         av::watermark::dct::ImageView view;
         view.width = image.width();
         view.height = image.height();
         view.stride = image.stride();
         view.pixels = image.bytes().data();
         av::watermark::dct::ExtractOptions options;
-        const auto extracted = av::watermark::dct::extract(view,
+        options.search_pixel_phase = algorithm == kHiddenAlgorithmRobustDct;
+        const auto extract = algorithm == kHiddenAlgorithmRobustDct
+            ? &av::watermark::robust::extract : &av::watermark::dct::extract;
+        const auto extracted = extract(view,
             key.data(), key.size(), options);
         result.status = map_extraction_status(extracted.status);
-        result.algorithm = kHiddenAlgorithmDctPairQim;
+        result.algorithm = algorithm;
         result.corrected_bytes = extracted.corrected_bytes;
         result.sync_score = static_cast<unsigned>(
             std::max(0, extracted.sync_score));

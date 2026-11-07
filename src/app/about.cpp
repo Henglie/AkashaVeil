@@ -498,7 +498,7 @@ LRESULT CALLBACK about_procedure(HWND hwnd, UINT message, WPARAM wp, LPARAM lp) 
             WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX, 0, 0, 0, 0, hwnd,
             reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_AV_ABOUT_REPOSITORY)), state->instance, nullptr);
         state->tab = CreateWindowExW(0, WC_TABCONTROLW, L"",
-            WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPCHILDREN, 0, 0, 0, 0, hwnd,
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0, 0, 0, 0, hwnd,
             reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_AV_ABOUT_TAB)), state->instance, nullptr);
         const wchar_t* tab_labels[] = {state->labels.tab_about, state->labels.tab_license,
             state->labels.tab_third_party, state->labels.tab_help};
@@ -508,9 +508,13 @@ LRESULT CALLBACK about_procedure(HWND hwnd, UINT message, WPARAM wp, LPARAM lp) 
         }
         state->edit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
             WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL |
-            WS_VSCROLL | ES_NOHIDESEL, 0, 0, 0, 0, hwnd,
+            WS_VSCROLL | ES_NOHIDESEL | WS_CLIPSIBLINGS, 0, 0, 0, 0, hwnd,
             reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_AV_ABOUT_EDIT)), state->instance, nullptr);
         SendMessageW(state->edit, EM_SETLIMITTEXT, 0x7FFFFFFE, 0);
+        // The edit is a sibling overlay on the tab display area. Keep it
+        // above the tab and clip sibling painting out of its client region.
+        SetWindowPos(state->edit, HWND_TOP, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         state->status = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX,
             0, 0, 0, 0, hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_AV_ABOUT_STATUS)),
             state->instance, nullptr);

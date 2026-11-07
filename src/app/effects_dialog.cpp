@@ -36,6 +36,17 @@ struct Dialog {
     HFONT dialog_font=nullptr;
     ui::ControlTheme controls_theme{};
     const wchar_t* tr(Text key) const { return text(key,language); }
+    const wchar_t* key(const wchar_t* value) const { return text_key(value,language); }
+    void map_layout(RECT& rect) const {
+        MapDialogRect(hwnd,&rect);
+        rect.left=MulDiv(rect.left,84,100);rect.top=MulDiv(rect.top,84,100);
+        rect.right=MulDiv(rect.right,84,100);rect.bottom=MulDiv(rect.bottom,84,100);
+    }
+    bool checked(int id) const { return IsDlgButtonChecked(hwnd,id)==BST_CHECKED; }
+    unsigned algorithm() const {
+        const int index=selection(624);
+        return index<0 ? 0u : static_cast<unsigned>(SendDlgItemMessageW(hwnd,624,CB_GETITEMDATA,index,0));
+    }
     static unsigned window_dpi(HWND window) {
         using GetWindowDpi=UINT(WINAPI*)(HWND);
         if (const auto get=reinterpret_cast<GetWindowDpi>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"GetDpiForWindow"))) {
@@ -80,6 +91,10 @@ struct Dialog {
         max_scroll_=std::max(0,placement.virtual_height-content_bottom_);
         scroll_offset=std::clamp(scroll_offset,0,max_scroll_);
         for (const auto& entry : entries) {
+            if (((entry.id==614 || entry.id==634) && selection(610)!=4)
+                || (entry.id==622 && selection(610)<3) || (entry.id==629 && selection(610)>=3)) {
+                ShowWindow(entry.hwnd,SW_HIDE); continue;
+            }
             const int w=entry.base.right-entry.base.left;
             const int h=entry.base.bottom-entry.base.top;
             const int x=rtl ? client_width-(entry.base.left+w) : entry.base.left;
@@ -124,7 +139,7 @@ struct Dialog {
         MONITORINFO monitor{sizeof(monitor)};
         GetMonitorInfoW(MonitorFromWindow(GetParent(hwnd),MONITOR_DEFAULTTONEAREST),&monitor);
         const int margin=static_cast<int>(ui::scale_dip(8,dpi));
-        RECT collapsed{0,0,0,14}; MapDialogRect(hwnd,&collapsed);
+        RECT collapsed{0,0,0,14}; map_layout(collapsed);
         int max_right=0, max_bottom=0, fixed_height=0;
         for (const auto& e : entries) {
             if (e.fixed) { fixed_height=std::max(fixed_height,static_cast<int>(e.base.bottom-e.base.top)); continue; }
@@ -166,10 +181,12 @@ struct Dialog {
         apply_layout();
     }
     HWND make(const wchar_t* cls,int id,const wchar_t* text,DWORD style,int x,int y,int w,int h,bool dropdown=false) {
-        RECT r{x,y,x+w,y+h}; MapDialogRect(hwnd,&r);
+        RECT r{x,y,x+w,y+h}; map_layout(r);
         HWND control=CreateWindowExW(lstrcmpW(cls,L"EDIT")==0 ? WS_EX_CLIENTEDGE : 0,cls,text,WS_CHILD|WS_VISIBLE|style,r.left,r.top,r.right-r.left,r.bottom-r.top,hwnd,reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),GetModuleHandleW(nullptr),nullptr);
         SendMessageW(control,WM_SETFONT,SendMessageW(hwnd,WM_GETFONT,0,0),TRUE);
         controls_theme.apply(control);
+        if (lstrcmpW(cls,L"BUTTON")==0 && (style&BS_TYPEMASK)==BS_GROUPBOX)
+            SetWindowPos(control,HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
         record(control,id,r,false,dropdown);
         return control;
     }
@@ -187,16 +204,16 @@ struct Dialog {
         if (selected<0 || selected>4 || selection(611)<0 || selection(612)<0) return false;
         m=selected==0 ? Mode::none : selected==2 ? Mode::blank : Mode::exclude;
         e.cover=selected==3 ? Cover::solid : selected==4 ? Cover::label : Cover::none;
-        e.mark=static_cast<Mark>(selection(611)); e.capture_only=selection(612)==1;
+        const bool mark_output=selected==0 || selected>=3;
+        e.mark=mark_output && checked(627) ? static_cast<Mark>(selection(611)+1) : Mark::none; e.capture_only=selection(612)==1;
         e.text=input(613); e.label=input(614); e.tag=input(615);
         e.capture_route=selection(623)==1 ? 2u : 1u;
-        const int hidden=selection(624);
-        e.hidden_algorithm=hidden==1 ? 1u : hidden==2 ? 2u : 0u;
+        e.hidden_algorithm=selected==0 && checked(628) ? algorithm() : 0u;
         e.hidden_payload=input(625);
         e.hidden_payload_bytes.clear();
         hidden_key=input(626);
         if (e.hidden_algorithm!=0) {
-            if (!e.capture_only || e.cover!=Cover::none) return false;
+            if (e.cover!=Cover::none) return false;
             if (e.hidden_payload.empty() || utf8_bytes(e.hidden_payload)>32) return false;
             if (hidden_key.empty() || utf8_bytes(hidden_key)>128) return false;
         } else {
@@ -210,17 +227,26 @@ struct Dialog {
         };
         return number(616,e.opacity) && number(617,e.font_size) && number(618,e.spacing) && valid_effects(e);
     }
-    void changed() {
+    void changed(int source=0) {
         if (updating) return;
-        const bool mark=selection(611)>0;
+        const bool original=selection(610)==0;
+        const bool mark_output=original || selection(610)>=3;
+        (void)source;
+        if (!original) CheckDlgButton(hwnd,628,BST_UNCHECKED);
+        if (!mark_output) CheckDlgButton(hwnd,627,BST_UNCHECKED);
+        const bool mark=mark_output && checked(627);
+        const bool hidden=original && checked(628);
+        EnableWindow(GetDlgItem(hwnd,627),mark_output);
         const bool capture_only=selection(612)==1;
-        const bool capture_original=capture_only && selection(610)<3;
-        if (!capture_original) select(624,0);
-        for (int id : {612,613,615,616,618,621}) EnableWindow(GetDlgItem(hwnd,id),mark);
+        EnableWindow(GetDlgItem(hwnd,612),mark || hidden);
+        for (int id : {611,613,615,616,617,618,619,621}) EnableWindow(GetDlgItem(hwnd,id),mark);
         EnableWindow(GetDlgItem(hwnd,614),selection(610)==4);
-        EnableWindow(GetDlgItem(hwnd,623),capture_original);
-        EnableWindow(GetDlgItem(hwnd,624),capture_original);
-        const bool hidden=capture_original && selection(624)>0;
+        for (int id : {614,634}) ShowWindow(GetDlgItem(hwnd,id),selection(610)==4?SW_SHOW:SW_HIDE);
+        ShowWindow(GetDlgItem(hwnd,622),selection(610)>=3?SW_SHOW:SW_HIDE);
+        ShowWindow(GetDlgItem(hwnd,629),selection(610)<3?SW_SHOW:SW_HIDE);
+        EnableWindow(GetDlgItem(hwnd,623),capture_only && original && (mark || hidden));
+        EnableWindow(GetDlgItem(hwnd,628),original);
+        EnableWindow(GetDlgItem(hwnd,624),hidden);
         EnableWindow(GetDlgItem(hwnd,625),hidden);
         EnableWindow(GetDlgItem(hwnd,626),hidden);
         InvalidateRect(GetDlgItem(hwnd,620),nullptr,FALSE);
@@ -238,38 +264,53 @@ struct Dialog {
         controls_theme.apply_children(hwnd);
         create_font();
         for (int id : {IDOK,IDCANCEL}) {
-            const HWND button=GetDlgItem(hwnd,id); RECT base{};
-            if (button && GetWindowRect(button,&base)) {
-                MapWindowPoints(nullptr,hwnd,reinterpret_cast<POINT*>(&base),2);
-                record(button,id,base,true);
-            }
+            const HWND button=GetDlgItem(hwnd,id);
+            const int x=id==IDOK ? 434 : 520;
+            RECT base{x,0,x+80,18}; map_layout(base);
+            record(button,id,base,true);
         }
-        label(Text::effect_mode,10,8);
-        const Text modes[]={Text::original_content,Text::excluded,Text::blanked,Text::solid_cover,Text::label_cover}; combo(610,modes,5,10,22,238);
-        label(Text::watermark,10,42); const Text marks[]={Text::mark_off,Text::mark_tiled,Text::mark_center,Text::mark_corner}; combo(611,marks,4,10,56,238);
-        label(Text::audience,10,76,114); const Text audience[]={Text::audience_both,Text::audience_capture}; combo(612,audience,2,10,90,114);
-        label(Text::capture_route,134,76,114); const Text routes[]={Text::route_a,Text::route_b}; combo(623,routes,2,134,90,114);
-        label(Text::preset,10,110); const Text presets[]={Text::preset_custom,Text::preset_confidential,Text::preset_internal,Text::preset_tracking}; combo(621,presets,4,94,107,154);
-        label(Text::mark_text,10,126); make(L"EDIT",613,effects.text.c_str(),WS_TABSTOP|ES_MULTILINE|ES_AUTOVSCROLL|ES_WANTRETURN|WS_VSCROLL,10,140,238,28);
-        label(Text::cover_text,10,168); make(L"EDIT",614,effects.label.c_str(),WS_TABSTOP|ES_AUTOHSCROLL,10,182,238,14);
-        label(Text::tracking_id,10,202); make(L"EDIT",615,effects.tag.c_str(),WS_TABSTOP|ES_AUTOHSCROLL,10,216,238,14);
-        for (int id : {613,614,615}) SendDlgItemMessageW(hwnd,id,EM_SETLIMITTEXT,1024,0);
-        label(Text::hidden_watermark,10,230,114); const Text algorithms[]={Text::hidden_off,Text::algorithm_dct,Text::algorithm_dwt}; combo(624,algorithms,3,134,232,114);
-        label(Text::hidden_payload,10,248,238); make(L"EDIT",625,effects.hidden_payload.c_str(),WS_TABSTOP|ES_MULTILINE|ES_AUTOVSCROLL|WS_VSCROLL,10,262,238,20);
-        label(Text::hidden_key,10,286,238); make(L"EDIT",626,hidden_key.c_str(),WS_TABSTOP|ES_AUTOHSCROLL|ES_PASSWORD,10,300,238,14);
-        for (int id : {625,626}) SendDlgItemMessageW(hwnd,id,EM_SETLIMITTEXT,1024,0);
-        label(Text::preview,262,8,204); make(L"STATIC",620,L"",SS_OWNERDRAW,262,22,204,108);
+        make(L"BUTTON",630,key(L"effects.base"),BS_GROUPBOX|WS_CLIPSIBLINGS,10,8,594,62);
+        const Text modes[]={Text::original_content,Text::excluded,Text::blanked,Text::solid_cover,Text::label_cover}; combo(610,modes,5,20,30,200);
+        make(L"STATIC",634,tr(Text::cover_text),SS_LEFT,232,20,250,12); make(L"EDIT",614,effects.label.c_str(),WS_TABSTOP|ES_AUTOHSCROLL,232,38,264,14);
         const auto count=std::wstring(tr(Text::effect_targets))+L": "+std::to_wstring(targets);
-        make(L"STATIC",0,count.c_str(),SS_LEFT,262,134,204,14);
+        make(L"STATIC",629,count.c_str(),SS_LEFT,232,30,264,14);
+        make(L"STATIC",635,key(L"effects.base_hint"),SS_LEFT,20,56,574,12);
+        make(L"BUTTON",622,tr(Text::background),WS_TABSTOP,508,36,86,18);
+
+        make(L"BUTTON",631,key(L"effects.visible"),BS_GROUPBOX|WS_CLIPSIBLINGS,10,78,292,260);
+        make(L"BUTTON",627,key(L"effects.visible_enable"),BS_AUTOCHECKBOX|WS_TABSTOP,20,94,272,16);
+        label(Text::watermark,20,114,132); const Text marks[]={Text::mark_tiled,Text::mark_center,Text::mark_corner}; combo(611,marks,3,20,130,132);
+        label(Text::preset,164,114,128); const Text presets[]={Text::preset_custom,Text::preset_confidential,Text::preset_internal,Text::preset_tracking}; combo(621,presets,4,164,130,128);
+        label(Text::mark_text,20,151,272); make(L"EDIT",613,effects.text.c_str(),WS_TABSTOP|ES_MULTILINE|ES_AUTOVSCROLL|ES_WANTRETURN|WS_VSCROLL,20,167,272,44);
+        label(Text::tracking_id,20,216,272); make(L"EDIT",615,effects.tag.c_str(),WS_TABSTOP|ES_AUTOHSCROLL,20,232,272,14);
         const Text numbers[]={Text::opacity,Text::font_size,Text::spacing}; const unsigned values[]={effects.opacity,effects.font_size,effects.spacing};
-        for (int i=0;i<3;++i) { label(numbers[i],262,152+i*21,140); make(L"EDIT",616+i,L"",WS_TABSTOP|ES_NUMBER,412,150+i*21,54,14); SetDlgItemInt(hwnd,616+i,values[i],FALSE); }
-        make(L"BUTTON",619,tr(Text::foreground),WS_TABSTOP,262,214,98,16); make(L"BUTTON",622,tr(Text::background),WS_TABSTOP,368,214,98,16);
-        make(L"EDIT",0,tr(Text::hidden_help),WS_TABSTOP|ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL|WS_VSCROLL,262,236,204,30);
-        make(L"EDIT",0,tr(Text::effect_help),WS_TABSTOP|ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL|WS_VSCROLL,262,272,204,42);
+        for (int i=0;i<3;++i) { label(numbers[i],20,256+i*24,102); make(L"EDIT",616+i,L"",WS_TABSTOP|ES_NUMBER,130,254+i*24,56,14); SetDlgItemInt(hwnd,616+i,values[i],FALSE); }
+        make(L"BUTTON",619,tr(Text::foreground),WS_TABSTOP,204,254,88,18);
+
+        make(L"BUTTON",632,tr(Text::hidden_watermark),BS_GROUPBOX|WS_CLIPSIBLINGS,312,78,292,174);
+        make(L"BUTTON",628,key(L"effects.hidden_enable"),BS_AUTOCHECKBOX|WS_TABSTOP,322,94,272,16);
+        make(WC_COMBOBOXW,624,L"",CBS_DROPDOWNLIST|WS_TABSTOP,322,116,272,110,true);
+        const wchar_t* algorithm_labels[]={L"R-DCT",tr(Text::algorithm_dct),tr(Text::algorithm_dwt)};
+        const unsigned algorithm_ids[]={3,1,2};
+        for (int i=0;i<3;++i) { SendDlgItemMessageW(hwnd,624,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(algorithm_labels[i])); SendDlgItemMessageW(hwnd,624,CB_SETITEMDATA,i,algorithm_ids[i]); }
+        label(Text::hidden_payload,322,137,272); make(L"EDIT",625,effects.hidden_payload.c_str(),WS_TABSTOP|ES_MULTILINE|ES_AUTOVSCROLL|WS_VSCROLL,322,153,272,26);
+        label(Text::hidden_key,322,185,272); make(L"EDIT",626,hidden_key.c_str(),WS_TABSTOP|ES_AUTOHSCROLL|ES_PASSWORD,322,201,272,14);
+        make(L"STATIC",0,key(L"effects.key_hint"),SS_LEFT,322,221,272,22);
+
+        make(L"BUTTON",633,key(L"effects.output"),BS_GROUPBOX|WS_CLIPSIBLINGS,312,260,292,128);
+        label(Text::audience,322,272,126); const Text audience[]={Text::audience_both,Text::audience_capture}; combo(612,audience,2,322,288,126);
+        label(Text::capture_route,460,272,134); const Text routes[]={Text::route_a,Text::route_b}; combo(623,routes,2,460,288,134);
+        make(L"STATIC",620,L"",SS_OWNERDRAW,322,310,272,66);
+        make(L"STATIC",0,key(L"effects.additive"),SS_LEFT,10,348,292,24);
+        make(L"STATIC",0,key(L"effects.preview_hint"),SS_LEFT,10,376,292,24);
+        for (int id : {613,614,615}) SendDlgItemMessageW(hwnd,id,EM_SETLIMITTEXT,1024,0);
+        for (int id : {625,626}) SendDlgItemMessageW(hwnd,id,EM_SETLIMITTEXT,1024,0);
         select(610,effects.cover==Cover::solid ? 3 : effects.cover==Cover::label ? 4 : mode==Mode::none ? 0 : mode==Mode::blank ? 2 : 1);
-        select(611,static_cast<int>(effects.mark)); select(612,effects.capture_only ? 1 : 0); select(621,0);
+        CheckDlgButton(hwnd,627,effects.mark!=Mark::none?BST_CHECKED:BST_UNCHECKED);
+        CheckDlgButton(hwnd,628,effects.hidden_algorithm!=0?BST_CHECKED:BST_UNCHECKED);
+        select(611,effects.mark==Mark::none?0:static_cast<int>(effects.mark)-1); select(612,effects.capture_only ? 1 : 0); select(621,0);
         select(623,effects.capture_route==2 ? 1 : 0);
-        select(624,effects.hidden_algorithm==1 ? 1 : effects.hidden_algorithm==2 ? 2 : 0);
+        select(624,effects.hidden_algorithm==1?1:effects.hidden_algorithm==2?2:0);
         updating=false; changed();
         create_font();
         prepare_layout();
@@ -361,7 +402,7 @@ INT_PTR CALLBACK procedure(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
         const Text keys[]={Text::preset_confidential,Text::preset_internal,Text::preset_tracking}; const int choice=d->selection(621);
         if (choice>=1 && choice<=3) { const auto value=std::wstring(d->tr(keys[choice-1]))+L"\r\n{id}  {time}"; SetDlgItemTextW(hwnd,613,value.c_str()); }
     }
-    if (HIWORD(wp)==CBN_SELCHANGE || HIWORD(wp)==EN_CHANGE) d->changed();
+    if (HIWORD(wp)==CBN_SELCHANGE || HIWORD(wp)==EN_CHANGE || ((id==627 || id==628) && HIWORD(wp)==BN_CLICKED)) d->changed(id);
     return FALSE;
 }
 }

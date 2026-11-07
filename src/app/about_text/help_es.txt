@@ -1,4 +1,6 @@
-Ayuda de AkashaVeil (sin conexión, 0.1.0)
+Ayuda de AkashaVeil (sin conexión)
+
+Opciones avanzadas: contenido capturado, marca visible, marca oculta y salida/vista previa. Las marcas se activan de forma independiente y se combinan; el destino se elige aparte. Las herramientas de imagen abren la extracción con alineación automática y parámetros avanzados plegados.
 
 1. Inicio rápido
 1. A la izquierda se listan ventanas o procesos. Use las pestañas para cambiar de vista y el cuadro de filtro para buscar por título, nombre de proceso o ruta.
@@ -38,9 +40,11 @@ Ayuda de AkashaVeil (sin conexión, 0.1.0)
 - Confirme que el destino es una ventana de nivel superior opaca y mantenga esta herramienta en ejecución. Si el destino se cierra, minimiza o pierde su identidad, la sesión se detiene y las capas se limpian.
 
 5. Marca oculta y marca local en imágenes
-- La marca oculta se escribe después de la visible y usa marcas ciegas en el dominio del píxel; no se usa ningún servicio de rastreo en línea. Hay dos algoritmos: DCT (QIM) y DWT (Haar LH3).
+- La marca oculta se escribe después de la visible y usa el dominio de transformada, sin rastreo en línea. Algoritmos: R-DCT, DCT (QIM) y DWT (Haar LH3).
+- R-DCT añade un piloto distribuido con clave, entrelazado espacial por bytes, decisiones suaves y corrección RS de errores/borrados. Requiere al menos 256x256 píxeles. El valor 24 corresponde a pasos de datos/piloto 64/48; puede añadir textura fina.
+- Para recortes R-DCT, active la búsqueda de mosaico y fase. Para imágenes redimensionadas, indique el ancho/alto original y una escala distinta de 1. La puntuación R-DCT es 0-1000; la antigua, 0-32. No se garantizan fotos de pantalla, impresión/escaneo ni giros arbitrarios; no se estima automáticamente la perspectiva o escala.
 - La carga útil es de 32 bytes UTF-8 como máximo. La clave es de 1-128 bytes, se usa solo en esta sesión y no se guarda en el perfil. La extracción no necesita la imagen original, pero requiere la misma clave y parámetros de protocolo.
-- Las marcas visible y oculta pueden combinarse: la misma imagen final puede mostrar la marca visible y entregar la carga oculta. Las idas y vueltas PNG/BMP/JPEG y la matriz de robustez interna pasan. La extracción desde fotogramas de captura externa real todavía no alcanza el objetivo; no confíe en extraer marcas ocultas de OBS/reuniones/capturas del sistema en esta compilación.
+- Se verificaron archivos locales y captura de escritorio de una ventana controlada con marco hasta la extracción en la interfaz. Capture la pantalla o el proxy; la captura directa del original puede omitir las marcas. Vídeos, fotos de pantalla y transformaciones arbitrarias no están garantizados.
 - Ajustes > Marca de agua en imagen abre la herramienta local de inserción/extracción PNG/JPEG/BMP. El archivo de origen no se sobrescribe por defecto; sobrescribir requiere confirmación. Puede copiar o exportar la carga extraída. Los archivos no se suben y la carga se escribe en píxeles, no en metadatos.
 - Geometría, delta, calidad JPEG, búsqueda de mosaico/fase y parámetros relacionados manejan escalado, recorte o imágenes de origen desconocido. Mantenga los valores por defecto si no está seguro.
 
@@ -98,7 +102,7 @@ Ejemplos:
 10. Solución de problemas y compatibilidad
 - Si excluir/hacer transparente no surte efecto, identifique primero el backend. Distintas herramientas de captura usan rutas diferentes y algunas no respetan la afinidad de pantalla.
 - Si la sustitución, solo captura o la ruta B fallan, confirme la versión de Windows (la composición de escritorio requiere 10 2004+), que el destino sea una ventana de nivel superior opaca y que esta herramienta siga en ejecución.
-- Si la extracción de la marca oculta falla, confirme el mismo algoritmo, clave y geometría usados al insertar. La extracción desde captura externa real aún no pasa; vea la sección 5.
+- Si no se detecta marca, revise la clave, el origen y el tamaño de píxel; recorte la ventana sin redimensionar. La búsqueda de mosaico y fase está activada por defecto; las pistas de escala están en parámetros avanzados.
 - Si un botón de la barra de tareas de destino es incorrecto, use Restaurar botón de barra de tareas del destino. Al salir, la aplicación intenta restaurar los bits de estilo modificados en esta sesión.
 - Si un perfil está dañado o el directorio portable es de solo lectura, la aplicación se niega a reemplazar el perfil válido actual. Elija una ubicación Guardar como escribible.
 - Windows 7 solo ofrece capacidades graduadas; WDA_EXCLUDEFROMCAPTURE, WGC y algunas rutas de composición de escritorio no están disponibles. OBS/reuniones, captura del sistema, Desktop Duplication y captura de ventanas deben verificarse por separado en el entorno de destino.

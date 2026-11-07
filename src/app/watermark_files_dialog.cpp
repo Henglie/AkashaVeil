@@ -61,7 +61,9 @@ enum ControlId {
     id_cancel,
     id_close,
     id_status,
-    id_help
+    id_help,
+    id_operation,
+    id_advanced_parameters
 };
 
 const wchar_t* translate(const std::wstring& language, const wchar_t* key)
@@ -256,7 +258,7 @@ public:
         const std::wstring message = std::wstring(translate(language_, L"watermark.files.overwrite"))
             + path;
         return MessageBoxW(owner_, message.c_str(),
-                   translate(language_, L"watermark.files.title"),
+                   translate(language_, L"watermark.files.entry"),
                    MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2)
             == IDYES;
     }
@@ -341,7 +343,7 @@ public:
         const int x = owner_rect.left + ((owner_rect.right - owner_rect.left) - width) / 2;
         const int y = owner_rect.top + ((owner_rect.bottom - owner_rect.top) - height) / 2;
         hwnd_ = CreateWindowExW(0, window_class,
-            translate(language_, L"watermark.files.title"),
+            translate(language_, L"watermark.files.entry"),
             (WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX) | WS_CLIPCHILDREN, x, y, width, height,
             owner_, nullptr, window.hInstance, this);
         if (hwnd_ == nullptr) {
@@ -432,6 +434,12 @@ private:
     void create_controls()
     {
         create_font();
+        operation_tab_=make(WC_TABCONTROLW,L"",WS_TABSTOP|WS_CLIPSIBLINGS,id_operation);
+        for (const auto* caption : {L"watermark.files.extract",L"watermark.files.embed"}) {
+            TCITEMW item{}; item.mask=TCIF_TEXT; const auto value=text(caption);
+            item.pszText=const_cast<wchar_t*>(value.c_str()); TabCtrl_InsertItem(operation_tab_,TabCtrl_GetItemCount(operation_tab_),&item);
+        }
+        advanced_toggle_=make(L"BUTTON",text(L"watermark.files.parameters").c_str(),BS_AUTOCHECKBOX|WS_TABSTOP,id_advanced_parameters);
         input_label_ = make(L"STATIC", text(L"watermark.files.input").c_str(), SS_LEFT, id_input_label);
         output_label_ = make(L"STATIC", text(L"watermark.files.output").c_str(), SS_LEFT, id_output_label);
         embed_algorithm_label_ = make(L"STATIC", text(L"watermark.files.embed_algorithm").c_str(), SS_LEFT, id_embed_algorithm_label);
@@ -469,7 +477,9 @@ private:
         SendMessageW(embed_algorithm_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DWT"));
         SendMessageW(embed_algorithm_, CB_SETITEMDATA, 0, static_cast<LPARAM>(watermark_files::Algorithm::dct));
         SendMessageW(embed_algorithm_, CB_SETITEMDATA, 1, static_cast<LPARAM>(watermark_files::Algorithm::dwt));
-        SendMessageW(embed_algorithm_, CB_SETCURSEL, 0, 0);
+        SendMessageW(embed_algorithm_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"R-DCT"));
+        SendMessageW(embed_algorithm_, CB_SETITEMDATA, 2, static_cast<LPARAM>(watermark_files::Algorithm::robust_dct));
+        SendMessageW(embed_algorithm_, CB_SETCURSEL, 2, 0);
 
         SendMessageW(extract_algorithm_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text(L"watermark.algorithm.auto").c_str()));
         SendMessageW(extract_algorithm_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DCT"));
@@ -477,10 +487,13 @@ private:
         SendMessageW(extract_algorithm_, CB_SETITEMDATA, 0, static_cast<LPARAM>(watermark_files::Algorithm::auto_detect));
         SendMessageW(extract_algorithm_, CB_SETITEMDATA, 1, static_cast<LPARAM>(watermark_files::Algorithm::dct));
         SendMessageW(extract_algorithm_, CB_SETITEMDATA, 2, static_cast<LPARAM>(watermark_files::Algorithm::dwt));
+        SendMessageW(extract_algorithm_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"R-DCT"));
+        SendMessageW(extract_algorithm_, CB_SETITEMDATA, 3, static_cast<LPARAM>(watermark_files::Algorithm::robust_dct));
         SendMessageW(extract_algorithm_, CB_SETCURSEL, 0, 0);
         SendMessageW(search_tile_, BM_SETCHECK, BST_CHECKED, 0);
+        SendMessageW(search_phase_, BM_SETCHECK, BST_CHECKED, 0);
 
-        const HWND all[] = {input_label_, output_label_, embed_algorithm_label_,
+        const HWND all[] = {operation_tab_,advanced_toggle_,input_label_, output_label_, embed_algorithm_label_,
             extract_algorithm_label_, delta_label_, quality_label_, payload_label_, key_label_,
             geometry_label_, input_, output_, browse_input_, browse_output_, embed_algorithm_,
             extract_algorithm_, payload_, payload_count_, key_, delta_, quality_, geometry_,
@@ -542,71 +555,82 @@ private:
             }
         };
 
+        const bool embedding=operation_==1;
+        auto show=[&](HWND window,bool visible){ ShowWindow(window,visible?SW_SHOW:SW_HIDE); };
+        for (HWND window : {output_label_,output_,browse_output_,payload_label_,payload_,payload_count_,embed_algorithm_label_,embed_algorithm_,embed_}) show(window,embedding);
+        for (HWND window : {extract_algorithm_label_,extract_algorithm_,extract_,copy_,export_}) show(window,!embedding);
+        for (HWND window : {delta_label_,delta_}) show(window,advanced_);
+        for (HWND window : {quality_label_,quality_}) show(window,advanced_ && embedding);
+        for (HWND window : {geometry_label_,geometry_,search_tile_,search_phase_}) show(window,advanced_ && !embedding);
+        place(operation_tab_,margin,y,width-margin*2,px(30)); y+=px(38);
         place(control(id_input_label), margin, y + px(5), label, row);
         place(control(id_input), margin + label, y, field, row);
         place(control(id_browse_input), margin + label + field + gap, y, button, row);
         y += row + gap;
-        place(control(id_output_label), margin, y + px(5), label, row);
-        place(control(id_output), margin + label, y, field, row);
-        place(control(id_browse_output), margin + label + field + gap, y, button, row);
-        y += row + gap;
+        if (embedding) {
+            place(control(id_output_label), margin, y + px(5), label, row);
+            place(control(id_output), margin + label, y, field, row);
+            place(control(id_browse_output), margin + label + field + gap, y, button, row);
+            y += row + gap;
+        }
 
         const int small_label = px(205);
         const int combo = px(96);
-        int x = margin;
-        place(control(id_embed_algorithm_label), x, y + px(5), small_label, row);
-        x += small_label;
-        place(control(id_embed_algorithm), x, y, combo, px(160));
-        x += combo + px(10);
-        place(control(id_extract_algorithm_label), x, y + px(5), small_label, row);
-        x += small_label;
-        place(control(id_extract_algorithm), x, y, combo, px(160));
+        place(embedding?embed_algorithm_label_:extract_algorithm_label_,margin,y+px(5),small_label,row);
+        place(embedding?embed_algorithm_:extract_algorithm_,margin+small_label,y,combo,px(160));
         y += row + gap;
-        x = margin;
-        place(control(id_delta_label), x, y + px(5), px(90), row);
-        x += px(90);
-        place(control(id_delta), x, y, px(60), row);
-        x += px(60) + px(10);
-        place(control(id_quality_label), x, y + px(5), px(110), row);
-        x += px(110);
-        place(control(id_quality), x, y, px(55), row);
-        y += row + gap;
-
-        place(control(id_payload_label), margin, y + px(5), label, row);
-        place(control(id_payload), margin + label, y, field, row);
-        place(control(id_payload_count), margin + label + field + gap, y, button, row);
-        y += row + gap;
+        if (embedding) {
+            place(control(id_payload_label), margin, y + px(5), label, row);
+            place(control(id_payload), margin + label, y, field, row);
+            place(control(id_payload_count), margin + label + field + gap, y, button, row);
+            y += row + gap;
+        }
         place(control(id_key_label), margin, y + px(5), label, row);
         place(control(id_key), margin + label, y, field, row);
         y += row + gap;
-        place(control(id_geometry_label), margin, y + px(5), width - margin * 2, row);
+        place(advanced_toggle_,margin,y,width-margin*2,row);
         y += row + gap;
-        const int geometry_width = std::max(px(120), width - margin * 2 - px(340));
-        place(control(id_geometry), margin, y, geometry_width, row);
-        place(control(id_search_tile), margin + geometry_width + gap, y, px(160), row);
-        place(control(id_search_phase), margin + geometry_width + gap + px(166), y, px(160), row);
-        y += row + gap;
+        if (advanced_) {
+            place(delta_label_,margin,y+px(5),px(110),row);
+            place(delta_,margin+px(112),y,px(65),row);
+            if (embedding) {
+                place(quality_label_,margin+px(196),y+px(5),px(110),row);
+                place(quality_,margin+px(310),y,px(65),row);
+            }
+            y+=row+gap;
+            if (!embedding) {
+                place(geometry_label_,margin,y,width-margin*2,row); y+=row+gap;
+                const int geometry_width=std::max(px(120),width-margin*2-px(340));
+                place(geometry_,margin,y,geometry_width,row);
+                place(search_tile_,margin+geometry_width+gap,y,px(160),row);
+                place(search_phase_,margin+geometry_width+gap+px(166),y,px(160),row);
+                y+=row+gap;
+            }
+        }
 
         const int preview_height = std::max(px(120), static_cast<int>(client.bottom) - y - px(230));
         place(control(id_preview), margin, y, width - margin * 2, preview_height);
         y += preview_height + gap;
 
         const int action_width = (width - margin * 2 - gap * 2) / 3;
-        int index = 0;
-        for (const int id : {id_embed, id_extract, id_cancel, id_copy, id_export, id_close}) {
-            place(control(id), margin + (index % 3) * (action_width + gap),
-                y + (index / 3) * (row + gap), action_width, row);
-            ++index;
+        place(embedding?embed_:extract_,margin,y,action_width,row);
+        place(cancel_,margin+action_width+gap,y,action_width,row);
+        place(close_,margin+2*(action_width+gap),y,action_width,row);
+        y+=row+gap;
+        if (!embedding) {
+            place(copy_,margin,y,action_width,row); place(export_,margin+action_width+gap,y,action_width,row);
+            y+=row+gap;
         }
-        y += 2 * (row + gap);
-        place(control(id_status), margin, y, width - margin * 2, px(52));
-        y += px(52) + gap;
+        place(control(id_status), margin, y, width - margin * 2, px(72));
+        y += px(72) + gap;
+        SetWindowTextW(help_,text(embedding?L"watermark.files.help":L"watermark.files.extract_help").c_str());
         place(control(id_help), margin, y, width - margin * 2, std::max(px(36), static_cast<int>(client.bottom) - y - margin));
     }
 
     void set_busy(bool busy)
     {
-        for (const int id : {id_embed, id_extract, id_browse_input, id_browse_output}) {
+        for (const int id : {id_embed, id_extract, id_browse_input, id_browse_output,id_operation,id_advanced_parameters,
+                id_payload,id_key,id_embed_algorithm,id_extract_algorithm,id_delta,id_quality,id_geometry,id_search_tile,id_search_phase}) {
             EnableWindow(control(id), busy ? FALSE : TRUE);
         }
         EnableWindow(control(id_cancel), busy ? TRUE : FALSE);
@@ -712,6 +736,8 @@ private:
         if (extraction && value == 0) {
             return watermark_files::Algorithm::auto_detect;
         }
+        if (value == static_cast<LRESULT>(watermark_files::Algorithm::robust_dct))
+            return watermark_files::Algorithm::robust_dct;
         return value == static_cast<LRESULT>(watermark_files::Algorithm::dwt)
             ? watermark_files::Algorithm::dwt : watermark_files::Algorithm::dct;
     }
@@ -753,6 +779,13 @@ private:
         if (values[0] <= 0.0) {
             return false;
         }
+        for (int index = 1; index < 7; ++index) {
+            const double maximum = index <= 2 ? static_cast<double>(watermark_files::max_pixels)
+                : index <= 4 ? 7.0 : 31.0;
+            if (values[index] < 0 || values[index] > maximum || std::floor(values[index]) != values[index])
+                return false;
+        }
+        if (values[1] * values[2] > static_cast<double>(watermark_files::max_pixels)) return false;
         options.scale = values[0];
         options.original_width = static_cast<std::uint32_t>(std::max(0.0, values[1]));
         options.original_height = static_cast<std::uint32_t>(std::max(0.0, values[2]));
@@ -858,6 +891,8 @@ private:
     std::wstring describe(const watermark_files::FileOutcome& outcome) const
     {
         std::wstring description = text(watermark_files::status_key(outcome.status));
+        if (outcome.status==watermark_files::StatusCode::not_detected)
+            description+=L"\n"+text(L"watermark.files.not_detected_help");
         if (!outcome.detail.empty()) {
             description += L" — " + localized_detail(outcome.detail, language_);
         }
@@ -870,6 +905,7 @@ private:
                     + outcome.output_path;
             } else {
                 description += L"  sync " + std::to_wstring(outcome.sync_score)
+                    + (outcome.algorithm_used == watermark_files::Algorithm::robust_dct ? L"/1000" : L"/32")
                     + L"  " + std::to_wstring(outcome.payload_bytes) + L" B";
                 if (!outcome.payload.empty()) {
                     const std::wstring utf8 = from_utf8(outcome.payload);
@@ -972,6 +1008,13 @@ private:
         case WM_SIZE:
             layout();
             return 0;
+        case WM_NOTIFY: {
+            const auto* notification=reinterpret_cast<NMHDR*>(lparam);
+            if (notification->hwndFrom==operation_tab_ && notification->code==TCN_SELCHANGE && !busy_) {
+                operation_=TabCtrl_GetCurSel(operation_tab_); layout();
+            }
+            return 0;
+        }
         case WM_ERASEBKGND: {
             RECT client{};
             GetClientRect(hwnd_, &client);
@@ -1021,6 +1064,8 @@ private:
                 return 0;
             }
             switch (id) {
+            case id_advanced_parameters:
+                advanced_=IsDlgButtonChecked(hwnd_,id_advanced_parameters)==BST_CHECKED; layout(); break;
             case IDCANCEL:
                 cancel_job(); DestroyWindow(hwnd_); break;
             case id_browse_input: open_input(); break;
@@ -1082,6 +1127,9 @@ private:
     UINT dpi_ = 96;
     bool rtl_ = false;
     bool busy_ = false;
+    int operation_=0;
+    bool advanced_=false;
+    HWND operation_tab_=nullptr,advanced_toggle_=nullptr;
     bool output_custom_ = false;
     bool last_extract_success_ = false;
     watermark_files::JobKind last_kind_ = watermark_files::JobKind::embed;

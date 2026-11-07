@@ -114,7 +114,8 @@ ExtractResult extract(const ImageView& image, const std::uint8_t* key, std::size
 // Keys cubic (a = -0.5) BGRA8 resampler with antialiasing on downscale.
 // Used by the scale attack and by extract() for scale != 1.
 bool resize_bicubic_bgra(const ImageView& source, std::uint32_t width, std::uint32_t height,
-    std::uint8_t* destination, std::size_t destination_stride) noexcept;
+    std::uint8_t* destination, std::size_t destination_stride,
+    const CancelToken& cancel = {}) noexcept;
 
 // Rotated destination dimensions. 90/270 swap width and height; other angles
 // keep the source dimensions (centre crop). Exactly 90/180/270 use a lossless
@@ -123,6 +124,7 @@ bool resize_bicubic_bgra(const ImageView& source, std::uint32_t width, std::uint
 void rotated_dimensions(std::uint32_t width, std::uint32_t height, double degrees,
     std::uint32_t& out_width, std::uint32_t& out_height) noexcept;
 bool rotate_bicubic_bgra(const ImageView& source, double degrees,
-    std::uint8_t* destination, std::size_t destination_stride) noexcept;
+    std::uint8_t* destination, std::size_t destination_stride,
+    const CancelToken& cancel = {}) noexcept;
 
 } // namespace av::watermark::dct

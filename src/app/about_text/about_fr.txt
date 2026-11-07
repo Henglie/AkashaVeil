@@ -1,4 +1,4 @@
-AkashaVeil 0.1.0 est un gestionnaire local de prévention de capture de fenêtres et de filigranes pour Windows.
+AkashaVeil est un gestionnaire local de prévention de capture de fenêtres et de filigranes pour Windows.
 
 Fonctions principales
 • Énumère les fenêtres et processus, protège ou rend transparentes les fenêtres sélectionnées et les restaure à tout moment. L'interface affiche l'état relu depuis le système.
@@ -6,7 +6,7 @@ Fonctions principales
 • Contenu d'origine (filigrane seul) : l'écran local et les captures conservent le contenu d'origine, avec le filigrane superposé selon le public choisi.
 • Remplacement : couleur unie ou texte de substitution. Comme le filigrane réservé à la capture, il s'agit d'une voie expérimentale de composition du bureau nécessitant Windows 10 2004+, DWM et une fenêtre de niveau supérieur opaque.
 • Capture seule avec contenu d'origine : la voie A capture depuis l'écran ; la voie B crée une fenêtre proxy contrôlée comme source de capture. L'écran local reste propre et aucun processus n'est injecté dans la cible ni dans l'application de capture.
-• Filigrane caché : filigranes aveugles dans le domaine pixel DCT (QIM) et DWT (Haar LH3), superposables au filigrane visible. La charge utile fait au plus 32 octets UTF-8 ; la clé fait 1-128 octets et n'est jamais enregistrée.
+• Filigrane caché : R-DCT amélioré, DCT (QIM) et DWT (Haar LH3) dans le domaine transformé, superposables au visible. Charge utile de 32 octets UTF-8 maximum ; clé de 1-128 octets jamais enregistrée. Voir l'aide pour les paramètres et le compromis qualité/robustesse.
 • Filigrane local sur image : insertion et extraction PNG/JPEG/BMP, sans écraser la source par défaut, avec copie ou export de la charge extraite.
 • Profils : enregistrer/charger règles de fenêtres, liste de programmes, disposition et état ; édition des règles, correspondance exacte d'identité et export CSV des métadonnées.
 • Préférences : actualisation automatique, protection automatique, zone de notification, fermeture vers la zone, titre/icône/infobulle aléatoires, traitement des fenêtres existantes au démarrage et limite de nouvelle tentative de disponibilité.

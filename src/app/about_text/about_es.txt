@@ -1,4 +1,4 @@
-AkashaVeil 0.1.0 es un gestor local de prevención de captura de ventanas y marcas de agua para Windows.
+AkashaVeil es un gestor local de prevención de captura de ventanas y marcas de agua para Windows.
 
 Capacidades principales
 • Enumera ventanas y procesos, protege o hace transparentes las ventanas seleccionadas y las restaura en cualquier momento. La interfaz muestra el estado leído del sistema.
@@ -6,7 +6,7 @@ Capacidades principales
 • Contenido original (solo marca de agua): la pantalla local y las capturas conservan el contenido original, con la marca superpuesta según el público elegido.
 • Sustitución: color sólido o texto de relleno. Igual que la marca solo para captura, es una vía experimental de composición de escritorio que requiere Windows 10 2004+, DWM y una ventana de nivel superior opaca.
 • Solo captura con contenido original: la ruta A captura desde la pantalla; la ruta B crea una ventana proxy controlada como fuente de captura. La pantalla local permanece limpia y no se inyecta ningún proceso en el destino ni en la aplicación de captura.
-• Marca de agua oculta: marcas ciegas en el dominio del píxel DCT (QIM) y DWT (Haar LH3), combinables con la marca visible. La carga útil es de 32 bytes UTF-8 como máximo; la clave es de 1-128 bytes y nunca se guarda.
+• Marca oculta: R-DCT mejorado, DCT (QIM) y DWT (Haar LH3) en el dominio de transformada, combinables con la marca visible. Carga máxima: 32 bytes UTF-8; clave de 1-128 bytes, nunca guardada. Consulte la ayuda para parámetros y equilibrio entre calidad y robustez.
 • Marca de agua local en imágenes: inserción y extracción para PNG/JPEG/BMP, sin sobrescribir el origen por defecto, con copia o exportación de la carga extraída.
 • Perfiles: guardar/cargar reglas de ventanas, lista de programas, disposición y estado; edición de reglas, coincidencia exacta de identidad y exportación de metadatos CSV.
 • Preferencias: actualización automática, protección automática, bandeja, cerrar a la bandeja, título/icono/tooltip aleatorios, tratamiento de ventanas existentes al inicio y límite de reintentos de preparación.

@@ -19,4 +19,10 @@ void rs_encode(const std::uint8_t message[kCodewordDataSize],
 bool rs_decode(const std::uint8_t codeword[kCodewordSize],
     std::uint8_t out_message[kCodewordDataSize], std::uint8_t& corrected) noexcept;
 
+// Errors + known missing/unreliable symbols: 2*errors + erasures <= 72.
+// Positions refer to bytes in the shortened 124-byte codeword, not bits.
+bool rs_decode_erasures(const std::uint8_t codeword[kCodewordSize],
+    const std::uint8_t* erasures, std::size_t erasure_count,
+    std::uint8_t out_message[kCodewordDataSize], std::uint8_t& corrected) noexcept;
+
 } // namespace av::watermark

@@ -25,7 +25,8 @@ constexpr std::size_t max_key = 128;
 enum class Algorithm : unsigned {
     auto_detect = 0,
     dct = 1,
-    dwt = 2
+    dwt = 2,
+    robust_dct = 3
 };
 
 enum class StatusCode : unsigned {
@@ -72,7 +73,7 @@ struct ExtractOptions {
     std::vector<std::uint8_t> key;
     double delta = 24.0;
     bool search_tile = true;
-    bool search_phase = false;
+    bool search_phase = true;
     double scale = 1.0;
     std::uint32_t original_width = 0;
     std::uint32_t original_height = 0;

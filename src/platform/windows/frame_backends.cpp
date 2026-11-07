@@ -681,6 +681,9 @@ private:
                 winrt::guid_of<ID3D11Texture2D>(), texture.put_void()));
             D3D11_TEXTURE2D_DESC desc{};
             texture->GetDesc(&desc);
+            const auto active=frame.ContentSize();
+            const UINT active_width=std::min(desc.Width,static_cast<UINT>(std::max(1,active.Width)));
+            const UINT active_height=std::min(desc.Height,static_cast<UINT>(std::max(1,active.Height)));
             if (!staging_) {
                 D3D11_TEXTURE2D_DESC staging_desc = desc;
                 staging_desc.Usage = D3D11_USAGE_STAGING;
@@ -710,7 +713,7 @@ private:
                     static_cast<std::int32_t>(hr));
                 return false;
             }
-            ImageBuffer image(desc.Width, desc.Height, 0, AlphaMode::opaque);
+            ImageBuffer image(active_width, active_height, 0, AlphaMode::opaque);
             if (!image.valid()) {
                 context_->Unmap(staging_.Get(), 0);
                 error_value = make_error(PipelineError::Domain::budget, 85,
@@ -718,14 +721,14 @@ private:
                 return false;
             }
             const std::size_t row_bytes =
-                static_cast<std::size_t>(desc.Width) * bgra8_bytes_per_pixel;
+                static_cast<std::size_t>(active_width) * bgra8_bytes_per_pixel;
             if (mapped.RowPitch < row_bytes) {
                 context_->Unmap(staging_.Get(), 0);
                 error_value = make_error(PipelineError::Domain::capture, 86,
                     L"WGC row pitch is smaller than the frame width");
                 return false;
             }
-            for (std::uint32_t row = 0; row < desc.Height; ++row) {
+            for (std::uint32_t row = 0; row < active_height; ++row) {
                 std::memcpy(image.bytes().data() +
                         static_cast<std::size_t>(row) * image.stride(),
                     static_cast<const std::uint8_t*>(mapped.pData) +
@@ -734,6 +737,8 @@ private:
             }
             context_->Unmap(staging_.Get(), 0);
             out.image = std::move(image);
+            // Track the pool texture size so a resize observed while waiting
+            // for this frame still recreates the pool on the next iteration.
             last_width_ = static_cast<int>(desc.Width);
             last_height_ = static_cast<int>(desc.Height);
             return true;

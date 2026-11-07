@@ -170,9 +170,22 @@ void rs_encode(const std::uint8_t message[kCodewordDataSize],
 bool rs_decode(const std::uint8_t codeword[kCodewordSize],
     std::uint8_t out_message[kCodewordDataSize], std::uint8_t& corrected) noexcept
 {
+    return rs_decode_erasures(codeword, nullptr, 0, out_message, corrected);
+}
+
+bool rs_decode_erasures(const std::uint8_t codeword[kCodewordSize],
+    const std::uint8_t* erasures, std::size_t erasure_count,
+    std::uint8_t out_message[kCodewordDataSize], std::uint8_t& corrected) noexcept
+{
     corrected = 0;
-    if (codeword == nullptr || out_message == nullptr) {
+    if (codeword == nullptr || out_message == nullptr || erasure_count > kParitySize
+        || (erasure_count != 0 && erasures == nullptr)) {
         return false;
+    }
+    std::array<bool, kCodewordSize> erased{};
+    for (std::size_t i = 0; i < erasure_count; ++i) {
+        if (erasures[i] >= kCodewordSize || erased[erasures[i]]) return false;
+        erased[erasures[i]] = true;
     }
     std::uint8_t received[kCodewordSize];
     std::memcpy(received, codeword, kCodewordSize);
@@ -191,7 +204,25 @@ bool rs_decode(const std::uint8_t codeword[kCodewordSize],
         return true;
     }
 
-    // Berlekamp-Massey: locator polynomial C(x) in ascending order.
+    // Remove known erasure contributions before finding the unknown errors.
+    // S'[j] = S[j+1] - X*S[j], X = alpha^(n-1-position).
+    auto reduced = syndromes;
+    int reduced_count = kRootCount;
+    std::array<std::uint8_t, kParitySize + 2> erasure_locator{};
+    erasure_locator[0] = 1;
+    int erasure_degree = 0;
+    for (std::size_t e = 0; e < erasure_count; ++e) {
+        const auto x = gf_pow(2, static_cast<int>(kCodewordSize) - 1 - erasures[e]);
+        for (int j = 0; j < reduced_count - 1; ++j) {
+            reduced[j] = static_cast<std::uint8_t>(reduced[j + 1] ^ gf_mul(x, reduced[j]));
+        }
+        --reduced_count;
+        for (int j = ++erasure_degree; j > 0; --j) {
+            erasure_locator[j] ^= gf_mul(x, erasure_locator[j - 1]);
+        }
+    }
+
+    // Berlekamp-Massey: unknown-error locator C(x), ascending order.
     std::array<std::uint8_t, kParitySize + 2> C{};
     std::array<std::uint8_t, kParitySize + 2> B{};
     std::array<std::uint8_t, kParitySize + 2> T{};
@@ -201,11 +232,11 @@ bool rs_decode(const std::uint8_t codeword[kCodewordSize],
     int length = 0;
     int m = 1;
     std::uint8_t b = 1;
-    for (int n = 0; n < kRootCount; ++n) {
-        std::uint8_t discrepancy = syndromes[static_cast<std::size_t>(n)];
+    for (int n = 0; n < reduced_count; ++n) {
+        std::uint8_t discrepancy = reduced[static_cast<std::size_t>(n)];
         for (int i = 1; i <= length; ++i) {
             discrepancy ^= gf_mul(C[static_cast<std::size_t>(i)],
-                syndromes[static_cast<std::size_t>(n - i)]);
+                reduced[static_cast<std::size_t>(n - i)]);
         }
         if (discrepancy == 0) {
             ++m;
@@ -234,21 +265,30 @@ bool rs_decode(const std::uint8_t codeword[kCodewordSize],
             ++m;
         }
     }
-    if (length <= 0 || length > static_cast<int>(kCorrectableBytes)) {
+    if (2 * length + erasure_degree > kRootCount) {
         return false;
     }
+    next.fill(0);
+    for (int i = 0; i <= length; ++i) {
+        for (int j = 0; j <= erasure_degree; ++j) {
+            next[i + j] ^= gf_mul(C[i], erasure_locator[j]);
+        }
+    }
+    C = next;
+    length += erasure_degree;
+    if (length <= 0 || length > kRootCount) return false;
     int locator_size = kParitySize + 2;
     while (locator_size > 1 && C[static_cast<std::size_t>(locator_size - 1)] == 0) {
         --locator_size;
     }
 
-    int positions[kCorrectableBytes];
-    std::uint8_t roots[kCorrectableBytes];
+    int positions[kParitySize];
+    std::uint8_t roots[kParitySize];
     int found = 0;
     for (int p = 0; p < static_cast<int>(kCodewordSize); ++p) {
         const std::uint8_t x = gf_pow(2, static_cast<int>(kCodewordSize) - 1 - p);
         if (poly_eval_asc(C.data(), locator_size, gf_inv(x)) == 0) {
-            if (found >= static_cast<int>(kCorrectableBytes)) {
+            if (found >= kRootCount) {
                 return false;
             }
             positions[found] = p;
@@ -261,7 +301,7 @@ bool rs_decode(const std::uint8_t codeword[kCodewordSize],
     }
 
     // Solve S_j = sum_i e_i * X_i^j for j = 0..length-1.
-    std::array<std::array<std::uint8_t, kCorrectableBytes + 1>, kCorrectableBytes> matrix{};
+    std::array<std::array<std::uint8_t, kParitySize + 1>, kParitySize> matrix{};
     for (int row = 0; row < length; ++row) {
         for (int col = 0; col < length; ++col) {
             matrix[static_cast<std::size_t>(row)][static_cast<std::size_t>(col)] =
@@ -310,12 +350,12 @@ bool rs_decode(const std::uint8_t codeword[kCodewordSize],
     for (int i = 0; i < length; ++i) {
         received[static_cast<std::size_t>(positions[i])] ^=
             matrix[static_cast<std::size_t>(i)][static_cast<std::size_t>(length)];
+        if (matrix[static_cast<std::size_t>(i)][static_cast<std::size_t>(length)] != 0) ++corrected;
     }
     if (!syndromes_zero(received)) {
         return false;
     }
     std::memcpy(out_message, received, kCodewordDataSize);
-    corrected = static_cast<std::uint8_t>(length);
     return true;
 }
 

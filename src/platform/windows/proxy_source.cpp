@@ -210,7 +210,7 @@ bool ProxySourceSession::start(const ProxySourceConfig& config,
 
     const Window target = window_from_metadata(config.target);
     impl_->key = target_key_from_window(target);
-    HiddenEmbedderSet embedders{make_dct_embedder(), make_dwt_embedder()}; impl_->session = std::make_unique<WatermarkSession>(embedders);
+    HiddenEmbedderSet embedders{make_dct_embedder(), make_dwt_embedder(), make_robust_embedder()}; impl_->session = std::make_unique<WatermarkSession>(embedders);
     CaptureRouteCapabilities routes;
     routes.proxy_source_b = true;
     routes.proxy_source_detail = L"controlled capture-source window"; if (!impl_->session->configure(config.plan, routes, error)

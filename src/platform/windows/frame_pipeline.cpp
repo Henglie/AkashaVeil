@@ -5,6 +5,7 @@
 
 #include <objidl.h>
 #include <gdiplus.h>
+#include <dwmapi.h>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -687,6 +688,30 @@ FramePipeline::NextResult FramePipeline::next(FramePair& out,
     if (impl_->config.force_opaque &&
         impl_->selection.selected == CaptureBackendKind::bitblt) {
         force_opaque(normalized);
+    }
+    if (impl_->config.window_client_only && impl_->config.source.kind==CaptureSourceKind::window) {
+        error_value={};
+        const HWND target=impl_->config.source.window;
+        RECT client{}; POINT origin{};
+        if (!GetClientRect(target,&client) || !ClientToScreen(target,&origin)) return NextResult::timeout;
+        const int w=client.right, h=client.bottom;
+        if (w<=0 || h<=0) return NextResult::timeout;
+        if (normalized.width()!=static_cast<unsigned>(w) || normalized.height()!=static_cast<unsigned>(h)) {
+            RECT bounds{};
+            const auto matches=[&] { return std::abs((bounds.right-bounds.left)-static_cast<int>(normalized.width()))<=2
+                && std::abs((bounds.bottom-bounds.top)-static_cast<int>(normalized.height()))<=2; };
+            if (FAILED(DwmGetWindowAttribute(target,9,&bounds,sizeof(bounds))) || !matches()) {
+                if (!GetWindowRect(target,&bounds) || !matches()) return NextResult::timeout;
+            }
+            const int x=origin.x-bounds.left, y=origin.y-bounds.top;
+            if (x<0 || y<0 || x+w>static_cast<int>(normalized.width()) || y+h>static_cast<int>(normalized.height()))
+                return NextResult::timeout;
+            ImageBuffer cropped(static_cast<unsigned>(w),static_cast<unsigned>(h),0,normalized.alpha());
+            for (int row=0;row<h;++row)
+                std::memcpy(cropped.bytes().data()+row*cropped.stride(),
+                    normalized.bytes().data()+(row+y)*normalized.stride()+x*4,static_cast<std::size_t>(w)*4);
+            normalized=std::move(cropped);
+        }
     }
     const auto normalize_end = std::chrono::steady_clock::now();
 

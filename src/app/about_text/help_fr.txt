@@ -1,4 +1,6 @@
-Aide AkashaVeil (hors ligne, 0.1.0)
+Aide AkashaVeil (hors ligne)
+
+Options avancées : contenu capturé, filigrane visible, filigrane caché, sortie/aperçu. Les ajouts sont indépendants et combinables ; leur audience se choisit séparément. Les images s'ouvrent sur l'extraction avec alignement automatique et paramètres avancés repliés.
 
 1. Démarrage rapide
 1. La partie gauche liste les fenêtres ou processus. Utilisez les onglets pour changer de vue et le filtre pour rechercher par titre, nom de processus ou chemin.
@@ -38,9 +40,11 @@ Aide AkashaVeil (hors ligne, 0.1.0)
 - Confirmez que la cible est une fenêtre de niveau supérieur opaque et gardez cet outil en cours d'exécution. Si la cible se ferme, est réduite ou perd son identité, la session s'arrête et les calques sont nettoyés.
 
 5. Filigrane caché et filigrane local sur image
-- Le filigrane caché est écrit après le visible et utilise des filigranes aveugles dans le domaine pixel ; aucun service de traçage en ligne n'est utilisé. Deux algorithmes : DCT (QIM) et DWT (Haar LH3).
+- Le filigrane caché suit le visible et utilise le domaine transformé, sans traçage en ligne. Algorithmes : R-DCT, DCT (QIM) et DWT (Haar LH3).
+- R-DCT ajoute un pilote réparti à clé, un entrelacement spatial par octets, des décisions souples et une correction RS des erreurs/effacements. Minimum : 256x256 pixels. La valeur 24 donne les pas données/pilote 64/48 ; une fine texture peut apparaître.
+- Pour un recadrage R-DCT, activez la recherche de tuile et de phase. Après redimensionnement, indiquez les dimensions originales et une échelle différente de 1. Score R-DCT : 0-1000 ; ancien : 0-32. Photos d'écran, impression/numérisation et rotations arbitraires ne sont pas garanties ; échelle et perspective ne sont pas estimées automatiquement.
 - La charge utile fait au plus 32 octets UTF-8. La clé fait 1-128 octets, sert uniquement à cette session et n'est pas enregistrée dans le profil. L'extraction ne nécessite pas l'image d'origine, mais exige la même clé et les mêmes paramètres de protocole.
-- Filigranes visible et caché superposables : la même image finale peut afficher le visible et fournir la charge cachée. Les allers-retours PNG/BMP/JPEG et la matrice de robustesse interne passent. L'extraction depuis de vraies trames de capture externe n'atteint pas encore l'objectif ; ne comptez pas sur l'extraction de filigranes cachés depuis OBS/réunions/captures système dans cette compilation.
+- Les fichiers locaux et une capture de bureau d'une fenêtre encadrée contrôlée jusqu'à l'extraction GUI ont été vérifiés. Capturez l'écran ou le proxy ; la fenêtre originale seule peut omettre les surcouches. Vidéos, photos d'écran et transformations arbitraires ne sont pas garanties.
 - Paramètres > Filigrane d'image ouvre l'outil local PNG/JPEG/BMP. Le fichier source n'est pas écrasé par défaut ; l'écrasement exige une confirmation. Vous pouvez copier ou exporter la charge extraite. Les fichiers ne sont pas téléversés et la charge est écrite dans les pixels, pas dans les métadonnées.
 - Géométrie, delta, qualité JPEG, recherche de tuile/phase et paramètres associés gèrent mise à l'échelle, recadrage ou images de source inconnue. Gardez les valeurs par défaut en cas de doute.
 
@@ -98,7 +102,7 @@ Exemples :
 10. Dépannage et compatibilité
 - Si exclure/rendre transparent est sans effet, identifiez d'abord le backend. Les outils de capture utilisent des voies différentes et certains ne respectent pas l'affinité d'affichage.
 - Si le remplacement, la capture seule ou la voie B échoue, vérifiez la version de Windows (composition du bureau : 10 2004+), que la cible est une fenêtre de niveau supérieur opaque et que l'outil tourne encore.
-- Si l'extraction du filigrane caché échoue, vérifiez le même algorithme, la même clé et la même géométrie qu'à l'insertion. L'extraction depuis une capture externe réelle n'est pas encore validée ; voir section 5.
+- Sans filigrane détecté, vérifiez clé, source et dimensions en pixels ; recadrez sans redimensionner. Tuile et phase sont recherchées par défaut ; les indications d'échelle sont dans les paramètres avancés.
 - Si un bouton de barre des tâches cible est incorrect, utilisez Restaurer le bouton de barre des tâches cible. À la sortie, l'application tente de restaurer les bits de style modifiés pendant la session.
 - Si un profil est corrompu ou le répertoire portable en lecture seule, l'application refuse de remplacer le profil valide. Choisissez un emplacement Enregistrer sous accessible en écriture.
 - Windows 7 n'offre que des capacités graduées ; WDA_EXCLUDEFROMCAPTURE, WGC et certaines voies de composition du bureau sont indisponibles. OBS/réunions, capture système, Desktop Duplication et capture de fenêtre doivent être vérifiés séparément dans l'environnement cible.

@@ -23,6 +23,7 @@ constexpr std::size_t kKeyMax = 128;
 constexpr std::uint8_t kProtocolVersion = 1;
 constexpr std::uint8_t kAlgorithmDctPairQim = 1;
 constexpr std::uint8_t kAlgorithmDwtLh3Qim = 2;
+constexpr std::uint8_t kAlgorithmRobustDct = 3;
 constexpr int kSyncThreshold = 26;
 
 extern const std::uint8_t kMagic[4];

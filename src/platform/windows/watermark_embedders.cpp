@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-// Blind watermark adapters: capture seam -> DCT / DWT cores.
-//
-// The adapters only translate image views, packet fields and status.  They do
-// not reimplement either algorithm and never change the frozen protocol
-// parameters (DCT C[1,2]/C[2,1] QIM delta=24; DWT 3-level Haar LH3 delta=24).
+// Blind watermark adapters: capture seam -> legacy DCT / DWT and R-DCT cores.
 #include "platform/windows/watermark_session.h"
 
 #include "av/watermark/dct.h"
 #include "av/watermark/dwt.h"
+#include "av/watermark/robust.h"
 
 #include <algorithm>
 #include <atomic>
@@ -80,11 +77,11 @@ bool copy_rows(const ImageView& source, const MutableImageView& target) {
 
 class DctEmbedder final : public BlindWatermarkEmbedder {
 public:
-    explicit DctEmbedder(std::shared_ptr<std::atomic<bool>> cancel)
-        : cancel_(std::move(cancel)) {}
+    explicit DctEmbedder(std::shared_ptr<std::atomic<bool>> cancel, bool robust = false)
+        : cancel_(std::move(cancel)), robust_(robust) {}
 
     std::uint16_t algorithm() const noexcept override {
-        return kHiddenAlgorithmDctPairQim;
+        return robust_ ? kHiddenAlgorithmRobustDct : kHiddenAlgorithmDctPairQim;
     }
     bool available() const noexcept override { return true; }
 
@@ -99,7 +96,7 @@ public:
                 L"DCT embed received invalid or mismatched image views");
             return false;
         }
-        if (packet.algorithm != kHiddenAlgorithmDctPairQim) {
+        if (packet.algorithm != algorithm()) {
             error = pipeline_error(PipelineError::Domain::unsupported, 41,
                 L"DCT embed received a non-DCT algorithm id");
             return false;
@@ -136,12 +133,14 @@ public:
 
         av::watermark::dct::EmbedOptions options;
         options.delta = av::watermark::dct::kDefaultDelta;
+        if (robust_) options.worker_threads = 2;
         if (cancel_) {
             options.cancel.fn = &cancel_requested;
             options.cancel.context = cancel_.get();
         }
         av::watermark::dct::EmbedResult result;
-        const auto status = av::watermark::dct::embed(view, key.data(),
+        const auto embed = robust_ ? &av::watermark::robust::embed : &av::watermark::dct::embed;
+        const auto status = embed(view, key.data(),
             key.size(), packet.payload.data(), packet.payload.size(), options,
             result);
         if (status != av::watermark::Status::success) {
@@ -154,6 +153,7 @@ public:
 
 private:
     std::shared_ptr<std::atomic<bool>> cancel_;
+    bool robust_ = false;
 };
 
 class DwtEmbedder final : public BlindWatermarkEmbedder {
@@ -249,6 +249,12 @@ std::shared_ptr<BlindWatermarkEmbedder> make_dwt_embedder(
     std::shared_ptr<std::atomic<bool>> cancel) {
     if (!cancel) cancel = std::make_shared<std::atomic<bool>>(false);
     return std::make_shared<DwtEmbedder>(std::move(cancel));
+}
+
+std::shared_ptr<BlindWatermarkEmbedder> make_robust_embedder(
+    std::shared_ptr<std::atomic<bool>> cancel) {
+    if (!cancel) cancel = std::make_shared<std::atomic<bool>>(false);
+    return std::make_shared<DctEmbedder>(std::move(cancel), true);
 }
 
 }  // namespace av

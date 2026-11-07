@@ -1,4 +1,4 @@
-# 命令行与 JSON · AkashaVeil 0.1.0
+# 命令行与 JSON · AkashaVeil 0.1.1
 
 [文档导航](README.md) · [使用指南](USER_GUIDE.md) · [English overview](../README_EN.md#command-line)
 
@@ -98,7 +98,7 @@ PID 命令处理当前可枚举到的该进程窗口，不会等待进程未来�
 ```
 
 ```json
-{"name":"AkashaVeil","version":"0.1.0","architecture":"x64"}
+{"name":"AkashaVeil","version":"0.1.1","architecture":"x64"}
 ```
 
 仅传 `--profile <文件>` 时启动 GUI 并使用该配置；与保护 / 恢复组合时，配置主要用于选择输出语言，不会自动加载 GUI 水印方案、执行自动保护或修改配置文件。显式配置读取失败会给出警告，并继续按默认语言处理目标。

@@ -1,4 +1,4 @@
-AkashaVeil 0.1.0, Windows için yerel bir pencere yakalama önleme ve filigran yöneticisidir.
+AkashaVeil, Windows için yerel bir pencere yakalama önleme ve filigran yöneticisidir.
 
 Ana yetenekler
 • Pencereleri ve süreçleri listeler, seçilen pencereleri korur veya saydam yapar ve istendiğinde geri yükler. Arayüz sistemden okunan durumu gösterir.
@@ -6,7 +6,7 @@ Ana yetenekler
 • Özgün içerik (yalnızca filigran): yerel ekran ve yakalamalar özgün içeriği korur; filigran seçilen kitleye göre çizilir.
 • Değiştirme: düz renk veya metin yer tutucu. Yalnızca yakalama filigranı gibi, Windows 10 2004+, DWM ve opak üst düzey pencere gerektiren deneysel bir masaüstü kompozisyon yoludur.
 • Özgün içerikle yalnızca yakalama: A yolu ekrandan yakalar; B yolu kontrollü bir yakalama kaynağı vekil penceresi oluşturur. Yerel ekran temiz kalır ve hedefe veya yakalama uygulamasına süreç enjekte edilmez.
-• Gizli filigran: DCT (QIM) ve DWT (Haar LH3) piksel alanı kör filigranları, görünür filigranla birleştirilebilir. Yük en fazla 32 UTF-8 baytıdır; anahtar 1-128 bayttır ve asla kaydedilmez.
+• Gizli filigran: geliştirilmiş R-DCT, DCT (QIM) ve DWT (Haar LH3) dönüşüm alanı yöntemleri görünür filigranla birleşebilir. Yük en fazla 32 UTF-8 baytı; anahtar 1-128 bayttır ve kaydedilmez. Parametre ve kalite/dayanıklılık dengesi için yardıma bakın.
 • Yerel görüntü filigranı: PNG/JPEG/BMP için gömme ve çıkarma, kaynak varsayılan olarak üzerine yazılmaz, çıkarılan yük kopyalanabilir veya dışa aktarılabilir.
 • Profiller: pencere kuralları, program listesi, düzen ve durumu kaydetme/yükleme; kural düzenleme, tam kimlik eşleştirme ve CSV üst veri dışa aktarma.
 • Tercihler: otomatik yenileme, otomatik koruma, tepsi, tepsiye kapatma, rastgele başlık/simge/ipucu, başlangıçta mevcut pencereleri işleme ve hazır olma yeniden deneme sınırı.

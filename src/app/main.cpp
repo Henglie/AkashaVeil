@@ -134,11 +134,13 @@ struct App {
         std::unique_ptr<av::CaptureOnlyRenderSession> session;
         av::Window window;
         av::Effects effects;
+        bool ready_reported=false;
     };
     struct ProxySession {
         std::unique_ptr<av::ProxySourceSession> session;
         av::Window window;
         av::Effects effects;
+        bool ready_reported=false;
     };
     std::map<av::WindowKey, CaptureSession> capture_sessions;
     std::map<av::WindowKey, ProxySession> proxy_sessions;
@@ -220,8 +222,8 @@ struct App {
         icon_cache[key]=std::max(0,index); return std::max(0,index);
     }
     static bool needs_capture_session(const av::Effects& effects) {
-        return effects.capture_only && effects.cover == av::Cover::none
-            && (effects.mark != av::Mark::none || effects.hidden_algorithm != 0);
+        return effects.cover == av::Cover::none && (effects.hidden_algorithm != 0
+            || (effects.capture_only && effects.mark != av::Mark::none));
     }
     static av::TargetMetadata target_metadata(const av::Window& window) {
         av::TargetMetadata metadata;
@@ -271,6 +273,10 @@ struct App {
         plan.capture_only_route = effects.capture_route == 2
             ? av::CaptureOnlyRoute::proxy_source_b
             : av::CaptureOnlyRoute::display_capture_a;
+        if (!effects.capture_only) {
+            plan.visibility=av::WatermarkVisibility::screen_and_capture;
+            plan.capture_only_route=av::CaptureOnlyRoute::none;
+        }
         plan.explicit_layer = av::explicit_watermark_for_capture(effects, dpi);
         if (hidden) {
             const auto payload = effects.hidden_payload_bytes.empty()
@@ -335,7 +341,7 @@ struct App {
         const unsigned target_dpi = window_dpi(reinterpret_cast<HWND>(window.handle));
         const auto plan = watermark_plan(effects, key, target_dpi);
         av::HiddenEmbedderSet embedders{
-            av::make_dct_embedder(), av::make_dwt_embedder()};
+            av::make_dct_embedder(), av::make_dwt_embedder(), av::make_robust_embedder()};
         av::CompositionError composition_error;
         if (!av::WatermarkFrameComposer::validate_plan(plan, embedders,
                 composition_error)) {
@@ -343,7 +349,7 @@ struct App {
                 ? tr(Text::watermark_plan_failed) : composition_error.detail;
             return false;
         }
-        if (effects.capture_route == 2) {
+        if (effects.capture_only && effects.capture_route == 2) {
             auto session = std::make_unique<av::ProxySourceSession>();
             av::ProxySourceConfig config;
             config.target = target_metadata(window);
@@ -360,6 +366,7 @@ struct App {
         } else {
             auto session = std::make_unique<av::CaptureOnlyRenderSession>();
             av::CaptureOnlyRenderConfig config;
+            config.capture_only=effects.capture_only;
             config.pipeline.source.kind = av::CaptureSourceKind::window;
             config.pipeline.source.window = reinterpret_cast<HWND>(window.handle);
             config.pipeline.target = target_metadata(window);
@@ -369,7 +376,7 @@ struct App {
             config.pipeline.hidden.packet = plan.hidden_layer.packet;
             config.pipeline.hidden.key = plan.hidden_layer.key;
             config.pipeline.hidden_embedder = effects.hidden_algorithm == 2
-                ? embedders.dwt : embedders.dct;
+                ? embedders.dwt : effects.hidden_algorithm == 3 ? embedders.robust : embedders.dct;
             config.sync_interval_ms = 100;
             av::PipelineError pipeline_error;
             if (!session->start(config, pipeline_error)) {
@@ -398,6 +405,8 @@ struct App {
                 session_keys.erase(current->first);
                 capture_sessions.erase(current);
                 message(std::wstring(tr(Text::capture_session_end)) + L" " + detail);
+            } else if (!entry.ready_reported && snapshot.published_frames>0 && snapshot.capture_layer_visible) {
+                entry.ready_reported=true;message(tr(Text::effect_active));InvalidateRect(list,nullptr,FALSE);
             }
         }
         for (auto it = proxy_sessions.begin(); it != proxy_sessions.end();) {
@@ -412,6 +421,8 @@ struct App {
                 session_keys.erase(current->first);
                 proxy_sessions.erase(current);
                 message(std::wstring(tr(Text::capture_session_failed)) + L" " + detail);
+            } else if (!entry.ready_reported && snapshot.published_frames>0) {
+                entry.ready_reported=true;message(tr(Text::effect_active));InvalidateRect(list,nullptr,FALSE);
             }
         }
         update_session_timer();
@@ -423,7 +434,11 @@ struct App {
             if (e->cover!=av::Cover::none) result=tr(e->cover==av::Cover::solid ? Text::solid_cover : Text::label_cover);
             if (e->mark!=av::Mark::none) result+=L" + "+std::wstring(tr(Text::effect_active));
         }
-        if (has_session(av::window_key(w))) result+=L" + "+std::wstring(tr(Text::effect_active));
+        const auto key=av::window_key(w);
+        if (const auto found=capture_sessions.find(key);found!=capture_sessions.end())
+            result+=L" + "+std::wstring(tr(found->second.ready_reported?Text::effect_active:Text::busy));
+        else if (const auto proxy=proxy_sessions.find(key);proxy!=proxy_sessions.end())
+            result+=L" + "+std::wstring(tr(proxy->second.ready_reported?Text::effect_active:Text::busy));
         return result;
     }
     void draw_row(NMLVCUSTOMDRAW& draw) {
@@ -437,7 +452,7 @@ struct App {
             const int shift=dark ? 9 : -10;
             fill=RGB(std::clamp<int>(GetRValue(panel)+shift,0,255),std::clamp<int>(GetGValue(panel)+shift,0,255),std::clamp<int>(GetBValue(panel)+shift,0,255));
         }
-        if ((window.affinity_known && window.mode!=av::Mode::none) || layers.get(window)) {
+        if ((window.affinity_known && window.mode!=av::Mode::none) || layers.get(window) || has_session(av::window_key(window))) {
             const auto color=profile.accent;
             fill=RGB((3*GetRValue(fill)+GetRValue(color))/4,(3*GetGValue(fill)+GetGValue(color))/4,(3*GetBValue(fill)+GetBValue(color))/4);
         }
@@ -558,7 +573,7 @@ struct App {
             auto& label = menu_labels[menu_label_count++]; label = {text, false, checked};
             AppendMenuW(parent, flags, id, dark ? reinterpret_cast<LPCWSTR>(&label) : label.text);
         };
-        item(menu,preferences,Text::preferences); item(menu,help,Text::help_menu); item(menu,watermark_files,Text::watermark_files); item(menu,rules_dialog,Text::rules); item(menu,target_taskbar_hide,Text::target_taskbar_hide); item(menu,target_taskbar_show,Text::target_taskbar_show); AppendMenuW(menu,MF_SEPARATOR,0,nullptr);
+        item(menu,preferences,Text::preferences); item(menu,help,Text::help_menu); named(menu,watermark_files,av::text_key(L"watermark.files.entry",language)); item(menu,rules_dialog,Text::rules); item(menu,target_taskbar_hide,Text::target_taskbar_hide); item(menu,target_taskbar_show,Text::target_taskbar_show); AppendMenuW(menu,MF_SEPARATOR,0,nullptr);
         item(themes,theme_system,Text::system,profile.theme == av::Theme::system);
         item(themes,theme_light,Text::light,profile.theme == av::Theme::light);
         item(themes,theme_dark,Text::dark,profile.theme == av::Theme::dark);
@@ -993,7 +1008,7 @@ struct App {
         case restore_all: protect(av::Mode::none,true); break;
         case effects: {
             const auto targets=selected(); if (targets.empty()) { message(tr(Text::no_selection)); break; }
-            auto effect=profile.effects; auto mode=profile.effect_mode;
+            auto effect=profile.effects; auto mode=av::has_effects(effect) ? profile.effect_mode : targets.front().mode;
             std::wstring secret;
             if (const auto found=session_keys.find(av::window_key(targets.front())); found!=session_keys.end()) secret=found->second;
             if (const auto* active=layers.get(targets.front())) { effect=*active; mode=targets.front().mode; }
@@ -1014,7 +1029,7 @@ struct App {
                     }
                     if (failed) message(std::wstring(tr(Text::capture_session_failed))+L" "+detail+L" ("+std::to_wstring(ok)+L"/"+std::to_wstring(failed)+L")");
                     else if (!saved) message(tr(Text::error));
-                    else message(tr(Text::effect_active));
+                    else message(tr(Text::busy));
                 } else if (saved) protect(mode,false,effect);
             }
             break;

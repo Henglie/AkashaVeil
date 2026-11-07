@@ -924,7 +924,7 @@ ExtractResult extract(const ImageView& image, const std::uint8_t* key, std::size
 }
 
 bool resize_bicubic_bgra(const ImageView& source, std::uint32_t width, std::uint32_t height,
-    std::uint8_t* destination, std::size_t destination_stride) noexcept
+    std::uint8_t* destination, std::size_t destination_stride, const CancelToken& cancel) noexcept
 {
     if (!valid_image(source) || destination == nullptr || width == 0 || height == 0) {
         return false;
@@ -957,6 +957,7 @@ bool resize_bicubic_bgra(const ImageView& source, std::uint32_t width, std::uint
 
     // Horizontal pass: destination_width x source_height.
     for (std::uint32_t y = 0; y < source.height; ++y) {
+        if (cancel.requested()) return false;
         const std::uint8_t* row = source.pixels + static_cast<std::size_t>(y) * source.stride;
         for (std::uint32_t x = 0; x < width; ++x) {
             double channels[4] = {0.0, 0.0, 0.0, 0.0};
@@ -979,6 +980,7 @@ bool resize_bicubic_bgra(const ImageView& source, std::uint32_t width, std::uint
 
     // Vertical pass.
     for (std::uint32_t y = 0; y < height; ++y) {
+        if (cancel.requested()) return false;
         std::uint8_t* row = destination + static_cast<std::size_t>(y) * destination_stride;
         const auto& weight = weights_y[y];
         const auto& index = indices_y[y];
@@ -1015,7 +1017,7 @@ void rotated_dimensions(std::uint32_t width, std::uint32_t height, double degree
 }
 
 bool rotate_bicubic_bgra(const ImageView& source, double degrees, std::uint8_t* destination,
-    std::size_t destination_stride) noexcept
+    std::size_t destination_stride, const CancelToken& cancel) noexcept
 {
     if (!valid_image(source) || destination == nullptr || !std::isfinite(degrees)
         || std::fabs(degrees) > 360.0) {
@@ -1040,6 +1042,7 @@ bool rotate_bicubic_bgra(const ImageView& source, double degrees, std::uint8_t* 
 
     int quarter = 0;
     if (quarter_turns(degrees, quarter)) {
+        if (cancel.requested()) return false;
         exact_rotation(source, quarter, destination, destination_stride);
         return true;
     }
@@ -1051,6 +1054,7 @@ bool rotate_bicubic_bgra(const ImageView& source, double degrees, std::uint8_t* 
     const double center_x = (static_cast<double>(source.width) - 1.0) * 0.5;
     const double center_y = (static_cast<double>(source.height) - 1.0) * 0.5;
     for (std::uint32_t y = 0; y < height; ++y) {
+        if (cancel.requested()) return false;
         std::uint8_t* row = destination + static_cast<std::size_t>(y) * destination_stride;
         const double dy = static_cast<double>(y) - center_y;
         for (std::uint32_t x = 0; x < width; ++x) {

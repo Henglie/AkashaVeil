@@ -21,6 +21,9 @@ const wchar_t* render_session_state_name(RenderSessionState state) noexcept;
 
 struct CaptureOnlyRenderConfig {
     FramePipelineConfig pipeline;
+    // false: the same composed watermark is shown locally and in capture.
+    // true: an excluded clean mirror hides it only on the local desktop.
+    bool capture_only = true;
     // Off-screen test harnesses force DWM to present the mirror surfaces even
     // though no physical monitor contains them.  Product use leaves this false.
     bool force_present_for_offscreen_test = false;
@@ -54,10 +57,9 @@ struct CaptureOnlyRenderStatus {
     std::uint64_t last_publish_tick_ms = 0;
 };
 
-// Capture-only A route: the target is never modified.  A clean live mirror is
-// the local-facing surface (WDA_EXCLUDEFROMCAPTURE); a watermarked live mirror
-// is the capture-facing surface.  External display capture sees the
-// watermarked mirror, local display and window DC read the clean mirror.
+// Live original-content watermark surfaces. The composed mirror is above the
+// target. capture_only adds a higher excluded clean mirror for local display;
+// otherwise the same composed surface is visible locally and in screenshots.
 class CaptureOnlyRenderSession {
 public:
     CaptureOnlyRenderSession();

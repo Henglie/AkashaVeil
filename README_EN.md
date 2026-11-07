@@ -29,21 +29,27 @@
 
 ## Download
 
-Current release: **v0.1.0**. Each EXE is self-contained; no installer, Python, Qt, or separate runtime is required.
+Current release: **v0.1.1**. Each EXE is self-contained; no installer, Python, Qt, or separate runtime is required.
 
 | File | Platform |
 |---|---|
-| [AkashaVeil-x64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.0/AkashaVeil-x64.exe) | Intel / AMD 64-bit Windows; recommended for most PCs |
-| [AkashaVeil-x86.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.0/AkashaVeil-x86.exe) | 32-bit Windows; also runs on x64 Windows |
-| [AkashaVeil-arm64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.0/AkashaVeil-arm64.exe) | Windows on ARM |
-| [Complete ZIP](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.0/AkashaVeil-0.1.0-windows-all.zip) | All three architectures, offline documentation, license, and checksums |
-| [SHA256SUMS.txt](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.0/SHA256SUMS.txt) | SHA-256 checksums for release assets |
+| [AkashaVeil-x64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-x64.exe) | Intel / AMD 64-bit Windows; recommended for most PCs |
+| [AkashaVeil-x86.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-x86.exe) | 32-bit Windows; also runs on x64 Windows |
+| [AkashaVeil-arm64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-arm64.exe) | Windows on ARM |
+| [Complete ZIP](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-0.1.1-windows-all.zip) | All three architectures, offline documentation, license, and checksums |
+| [SHA256SUMS.txt](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/SHA256SUMS.txt) | SHA-256 checksums for release assets |
+
+China mirrors: [Quark Drive](https://pan.quark.cn/s/b0bc1b050888) · [Baidu Netdisk](https://pan.baidu.com/s/1mmNK-2tSO4c_0qTj_HCILA?pwd=0000) (access code: `0000`). Verify downloads against `SHA256SUMS.txt` for the matching release.
 
 ## Changelog
 
-### 0.1.0
+### 0.1.1
 
-Development completed. First official release.
+- Added R-DCT with a distributed keyed pilot, byte-local spatial interleaving, soft decisions, and RS errors/erasures correction for improved compression/crop recovery.
+- Integrated local image files, advanced mode, and capture composition; retained legacy DCT / DWT, nine languages, and lightweight self-contained EXEs.
+- Added Quark / Baidu mirrors and documented parameter, image-quality, and robustness trade-offs.
+- Fixed About text flickering during pointer movement by removing redundant full-client repaints and clipping overlapping siblings.
+- Reorganized advanced options into four groups with independent additive watermarks; split extraction and image writing, enabled alignment search by default, and fixed desktop layer order and pre-embedding client geometry.
 
 See [CHANGELOG.md](CHANGELOG.md) for the release history.
 
@@ -55,7 +61,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the release history.
 - **Advanced mode:** original content, capture exclusion, blanking, solid replacement, or a text placeholder; tiled, centered, and corner watermarks; configurable colors, opacity, font size, spacing, and presets.
 - **Local fields:** `{title}`, `{process}`, `{pid}`, `{time}`, and a user-entered `{id}`.
 - **Capture-only routes:** display capture (A) or a controlled capture-source window (B). Desktop-composition replacement and capture-only modes are experimental.
-- **Hidden watermarks:** DCT / QIM and DWT / Haar LH3 embedding and extraction; local PNG / JPEG / BMP workflows; payloads up to 32 UTF-8 bytes; keys are not saved in profiles.
+- **Hidden watermarks:** enhanced R-DCT plus legacy DCT / QIM and DWT / Haar LH3; local PNG / JPEG / BMP workflows; payloads up to 32 UTF-8 bytes; keys are not saved in profiles. R-DCT adds distributed synchronization, spatial interleaving, and soft-decision error correction. Greater robustness introduces more fine texture; see [watermark details](docs/WATERMARK.md).
 - **Profiles and automation:** rules, program lists, geometry, state, CSV export, automatic protection / refresh, tray behavior, taskbar options, and title / tray randomization.
 - **Nine UI languages:** Simplified Chinese, English, Spanish, French, Russian, Arabic (RTL), Turkish, Japanese, and Korean. Missing translations and Traditional Chinese system defaults fall back to English.
 - **Light / dark / system themes**, DPI-aware layout, CLI, JSON output, and keyboard shortcuts.
@@ -113,7 +119,7 @@ Exit codes: **0** success, **2** syntax, **3** no target, **4** partial failure,
 - Windows 7 and ARM64 binaries do not have complete target-machine validation records for this release. ARM64 cross-compilation is not a native-device test.
 - An elevated target normally requires running AkashaVeil at the same privilege level. Cross-process display-affinity changes use short-lived architecture-matched helper modules and a window-thread hook. The capture-only composition pipeline does not modify the recording application.
 - Desktop BitBlt results do not establish compatibility with OBS, meeting sharing, window capture, exclusive fullscreen, or every graphics renderer.
-- Recovering hidden watermarks from real external screenshot / recording frames is not yet reliable enough to guarantee. Use the local image embed / extract workflow for this release.
+- A controlled framed-window desktop screenshot -> GUI extraction workflow and local image files have been verified. Direct capture of the original window may omit overlays; recovery from arbitrary OBS/meeting video, camera recapture, or transformations is not guaranteed.
 - No kernel driver, cloud account, or complete attribution service is included. A watermark payload is not proof of identity or ownership.
 
 ## Build

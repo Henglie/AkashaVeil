@@ -226,7 +226,10 @@ const wchar_t* text(Text key, const std::wstring& language) {
     return language == L"zh" && e.zh && *e.zh ? e.zh : e.en;
 }
 
-struct KeyEntry { const wchar_t* key; const wchar_t* en; const wchar_t* zh; };
+struct KeyEntry {
+    const wchar_t* key; const wchar_t* en; const wchar_t* zh;
+    const wchar_t* extra[7]{}; // es/fr/ru/ar/tr/ja/ko for appended keys
+};
 static constexpr KeyEntry key_entries[] = {
     {L"image.detail.alloc_decode", L"Cannot allocate the decoded image.", L"无法分配解码后的图片内存。"},
     {L"image.detail.alloc_output", L"Cannot allocate the output image.", L"无法分配输出图片内存。"},
@@ -320,6 +323,21 @@ static constexpr KeyEntry key_entries[] = {
     {L"watermark.status.success", L"Success", L"成功"},
     {L"watermark.status.unsupported", L"Unsupported format, version or algorithm", L"不支持的格式、版本或算法"},
     {L"watermark.status.wrong_key", L"Wrong key", L"错误密钥"},
+    // Append new keys: the bundled legacy translation arrays are positional.
+    {L"watermark.algorithm.rdct",L"R-DCT",L"R-DCT",{L"R-DCT",L"R-DCT",L"R-DCT",L"R-DCT",L"R-DCT",L"R-DCT",L"R-DCT"}},
+    {L"effects.base",L"Capture content",L"捕获内容",{L"Contenido capturado",L"Contenu capturé",L"Содержимое захвата",L"محتوى الالتقاط",L"Yakalama içeriği",L"キャプチャ内容",L"캡처 내용"}},
+    {L"effects.base_hint",L"Exclusion/blanking suppress content. Add watermarks to original or replacement content.",L"排除/透明不输出原内容；水印叠加在原始内容或替身上。",{L"Excluir/vaciar oculta el contenido. Añada marcas al original o al reemplazo.",L"Exclusion/masquage supprime le contenu. Ajoutez des filigranes à l'original ou au remplacement.",L"Исключение/скрытие убирает содержимое. Знаки добавляются к оригиналу или замене.",L"الاستبعاد والإخفاء يمنعان المحتوى. أضف العلامات إلى المحتوى الأصلي أو البديل.",L"Hariç tutma/boşaltma içeriği gizler. Filigranı özgün veya yedek içeriğe ekleyin.",L"除外・透明化では内容を出力しません。透かしは元の内容または置換に重ねます。",L"제외/비움은 내용을 출력하지 않습니다. 워터마크는 원본 또는 대체 내용에 추가하세요."}},
+    {L"effects.visible",L"Visible watermark",L"显性水印",{L"Marca visible",L"Filigrane visible",L"Видимый знак",L"العلامة المرئية",L"Görünür filigran",L"可視透かし",L"가시 워터마크"}},
+    {L"effects.visible_enable",L"Add visible watermark",L"叠加显性水印",{L"Añadir marca visible",L"Ajouter un filigrane visible",L"Добавить видимый знак",L"إضافة علامة مرئية",L"Görünür filigran ekle",L"可視透かしを重ねる",L"가시 워터마크 추가"}},
+    {L"effects.hidden_enable",L"Add hidden watermark",L"叠加隐水印",{L"Añadir marca oculta",L"Ajouter un filigrane caché",L"Добавить скрытый знак",L"إضافة علامة مخفية",L"Gizli filigran ekle",L"不可視透かしを重ねる",L"숨은 워터마크 추가"}},
+    {L"effects.output",L"Output and preview",L"输出与预览",{L"Salida y vista previa",L"Sortie et aperçu",L"Вывод и просмотр",L"الإخراج والمعاينة",L"Çıktı ve önizleme",L"出力とプレビュー",L"출력 및 미리 보기"}},
+    {L"effects.additive",L"Visible and hidden watermarks can be enabled independently and combined.",L"显性水印与隐水印独立启用，可同时叠加。",{L"Las marcas visibles y ocultas se activan por separado y pueden combinarse.",L"Les filigranes visibles et cachés sont indépendants et combinables.",L"Видимый и скрытый знаки независимы и могут сочетаться.",L"يمكن تفعيل العلامتين المرئية والمخفية بشكل مستقل وجمعهما.",L"Görünür ve gizli filigranlar bağımsızdır ve birleştirilebilir.",L"可視・不可視透かしは個別に有効化し、同時に重ねられます。",L"가시 및 숨은 워터마크는 독립적으로 켜고 함께 사용할 수 있습니다."}},
+    {L"effects.key_hint",L"Keys are not saved. Use image extraction to recover the payload from screenshots.",L"密钥不保存；截图后从图片水印入口提取载荷。",{L"Las claves no se guardan. Extraiga la carga desde la captura.",L"Les clés ne sont pas enregistrées. Extrayez les données depuis la capture.",L"Ключи не сохраняются. Извлекайте данные из снимка экрана.",L"لا تُحفظ المفاتيح. استخرج البيانات من لقطة الشاشة.",L"Anahtar kaydedilmez. Veriyi ekran görüntüsünden çıkarın.",L"鍵は保存されません。画像の透かし機能でスクリーンショットから抽出します。",L"키는 저장되지 않습니다. 이미지 워터마크 기능으로 스크린샷에서 추출하세요."}},
+    {L"effects.preview_hint",L"Preview shows the visible layout. Verify hidden data by extracting a screenshot.",L"预览显示显性布局；隐水印请通过截图提取验证。",{L"La vista previa muestra la marca visible. Verifique la oculta extrayendo una captura.",L"L'aperçu montre le visible. Vérifiez les données cachées depuis une capture.",L"Предпросмотр показывает видимый знак. Скрытые данные проверьте по снимку.",L"تعرض المعاينة التخطيط المرئي. تحقّق من البيانات المخفية باستخراج لقطة.",L"Önizleme görünür düzeni gösterir. Gizli veriyi ekran görüntüsünden doğrulayın.",L"プレビューは可視レイアウトです。不可視データはスクリーンショットで検証してください。",L"미리 보기는 가시 배치입니다. 숨은 데이터는 스크린샷 추출로 확인하세요."}},
+    {L"watermark.files.parameters",L"Advanced parameters",L"高级参数",{L"Parámetros avanzados",L"Paramètres avancés",L"Дополнительные параметры",L"معلمات متقدمة",L"Gelişmiş parametreler",L"詳細パラメーター",L"고급 매개 변수"}},
+    {L"watermark.files.entry",L"Extract watermark / image tools",L"水印提取 / 图片处理",{L"Extraer marca / herramientas de imagen",L"Extraction de filigrane / images",L"Извлечение знака / изображения",L"استخراج العلامة / معالجة الصور",L"Filigran çıkarma / görüntü araçları",L"透かし抽出 / 画像処理",L"워터마크 추출 / 이미지 처리"}},
+    {L"watermark.files.extract_help",L"Open the screenshot and enter the embedding key. Alignment search is automatic by default. Capture the screen or the selected proxy output; direct capture of the original window may omit overlays.",L"打开截图并输入写入时的密钥，默认自动搜索对齐位置。请截取屏幕画面或指定代理输出；直接抓取原窗口可能不包含叠加水印。",{L"Abra la captura e introduzca la clave. La alineación se busca automáticamente. Capture la pantalla o la salida del proxy; capturar directamente la ventana original puede omitir las marcas.",L"Ouvrez la capture et saisissez la clé. L'alignement est recherché automatiquement. Capturez l'écran ou la sortie du proxy ; la fenêtre originale seule peut omettre les filigranes.",L"Откройте снимок и введите ключ. Выравнивание ищется автоматически. Захватывайте экран или выход прокси: прямой захват исходного окна может не включать знаки.",L"افتح لقطة الشاشة وأدخل المفتاح. البحث عن المحاذاة تلقائي. التقط الشاشة أو خرج الوكيل؛ قد لا يتضمن التقاط النافذة الأصلية مباشرةً العلامات.",L"Ekran görüntüsünü açıp anahtarı girin. Hizalama otomatik aranır. Ekranı veya vekil çıktısını yakalayın; özgün pencereyi doğrudan yakalamak filigranı atlayabilir.",L"スクリーンショットを開き、埋め込み時の鍵を入力します。位置合わせは自動検索します。画面またはプロキシ出力を撮影してください。元のウィンドウの直接取得では透かしが含まれない場合があります。",L"스크린샷을 열고 삽입 키를 입력하세요. 정렬은 자동 검색합니다. 화면 또는 프록시 출력을 캡처하세요. 원래 창을 직접 캡처하면 워터마크가 빠질 수 있습니다."}},
+    {L"watermark.files.not_detected_help",L"No validated watermark found. Check the key and capture source; try cropping to the marked window without resizing.",L"未找到可校验水印。请核对密钥和截图来源；可先裁剪至加水印的窗口区域，保持原始像素尺寸后重试。",{L"No se encontró una marca válida. Revise la clave y el origen; recorte a la ventana marcada sin cambiar el tamaño.",L"Aucun filigrane validé. Vérifiez la clé et la source ; recadrez sur la fenêtre marquée sans redimensionner.",L"Проверяемый знак не найден. Проверьте ключ и источник; обрежьте до помеченного окна без масштабирования.",L"لم يُعثر على علامة صالحة. تحقّق من المفتاح والمصدر، واقتص النافذة المعلّمة دون تغيير الحجم.",L"Doğrulanmış filigran bulunamadı. Anahtarı ve kaynağı kontrol edin; yeniden boyutlandırmadan işaretli pencereye kırpın.",L"検証可能な透かしが見つかりません。鍵と取得元を確認し、サイズ変更せず対象ウィンドウに切り抜いて再試行してください。",L"검증된 워터마크가 없습니다. 키와 캡처 출처를 확인하고 크기를 바꾸지 않은 채 표시된 창 영역으로 잘라 다시 시도하세요."}},
 };
 const wchar_t* text_key(const wchar_t* key, const std::wstring& language) {
     if (!key) return L"";
@@ -327,7 +345,13 @@ const wchar_t* text_key(const wchar_t* key, const std::wstring& language) {
         const auto& entry = key_entries[index];
         if (std::wcscmp(entry.key, key) == 0) {
             if (language != L"zh" && language != L"en") {
-                if (const auto* table = locale_table(language, true)) return table[index];
+                constexpr std::size_t legacy_count=sizeof(locale_es_strings)/sizeof(locale_es_strings[0]);
+                if (index<legacy_count) {
+                    if (const auto* table = locale_table(language, true)) return table[index];
+                } else {
+                    const wchar_t* codes[]={L"es",L"fr",L"ru",L"ar",L"tr",L"ja",L"ko"};
+                    for (int i=0;i<7;++i) if (language==codes[i] && entry.extra[i]) return entry.extra[i];
+                }
             }
             return language == L"zh" && entry.zh && *entry.zh ? entry.zh : entry.en;
         }

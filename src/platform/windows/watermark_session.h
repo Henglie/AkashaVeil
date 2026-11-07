@@ -29,6 +29,7 @@ namespace av {
 
 constexpr std::uint16_t kHiddenAlgorithmDctPairQim = 1;
 constexpr std::uint16_t kHiddenAlgorithmDwtLh3Qim = 2;
+constexpr std::uint16_t kHiddenAlgorithmRobustDct = 3;
 constexpr std::size_t kHiddenPayloadMax = 32;
 constexpr std::size_t kHiddenKeyMax = 128;
 
@@ -159,11 +160,14 @@ struct HiddenExtraction {
 struct HiddenEmbedderSet {
     std::shared_ptr<BlindWatermarkEmbedder> dct;
     std::shared_ptr<BlindWatermarkEmbedder> dwt;
+    std::shared_ptr<BlindWatermarkEmbedder> robust;
 };
 
 std::shared_ptr<BlindWatermarkEmbedder> make_dct_embedder(
     std::shared_ptr<std::atomic<bool>> cancel = {});
 std::shared_ptr<BlindWatermarkEmbedder> make_dwt_embedder(
+    std::shared_ptr<std::atomic<bool>> cancel = {});
+std::shared_ptr<BlindWatermarkEmbedder> make_robust_embedder(
     std::shared_ptr<std::atomic<bool>> cancel = {});
 
 // Pure in-memory composer. It never creates a window and never reads the

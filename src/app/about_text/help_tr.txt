@@ -1,4 +1,6 @@
-AkashaVeil yardımı (çevrimdışı, 0.1.0)
+AkashaVeil yardımı (çevrimdışı)
+
+Gelişmiş seçenekler: yakalama içeriği, görünür filigran, gizli filigran, çıktı/önizleme. İki filigran bağımsız açılıp birleştirilir; gösterim kapsamı ayrıca seçilir. Görüntü araçları otomatik hizalamalı çıkarma sayfasında açılır; gelişmiş parametreler kapalıdır.
 
 1. Hızlı başlangıç
 1. Solda pencereler veya süreçler listelenir. Görünümü sekmelerle değiştirin; başlık, süreç adı veya yola göre filtreleyin.
@@ -38,9 +40,11 @@ AkashaVeil yardımı (çevrimdışı, 0.1.0)
 - Hedefin opak üst düzey pencere olduğundan emin olun ve aracı çalışır tutun. Hedef kapanır, küçülür veya kimliğini kaybederse oturum durur ve katmanlar temizlenir.
 
 5. Gizli filigran ve yerel görüntü filigranı
-- Gizli filigran görünürden sonra yazılır ve piksel alanı kör filigranı kullanır; çevrimiçi izleme hizmeti kullanılmaz. DCT (QIM) ve DWT (Haar LH3) mevcuttur.
+- Gizli filigran görünürden sonra dönüşüm alanında yazılır; çevrimiçi izleme yoktur. Algoritmalar: R-DCT, DCT (QIM), DWT (Haar LH3).
+- R-DCT dağıtılmış anahtarlı pilot, bayt tabanlı uzamsal serpiştirme, yumuşak karar ve RS hata/silinti düzeltmesi ekler. En az 256x256 piksel gerekir. 24 değeri veri/pilot adımlarını 64/48 yapar; ince doku görülebilir.
+- Kırpılmış R-DCT için karo ve faz aramasını açın. Boyut değişiminde özgün genişlik/yüksekliği ve 1 dışı ölçeği girin. R-DCT puanı 0-1000; eski puan 0-32. Ekran fotoğrafı, baskı/tarama ve rastgele dönüş garanti edilmez; ölçek ve perspektif otomatik kestirilmez.
 - Yük en fazla 32 UTF-8 baytıdır. Anahtar 1-128 bayttır, yalnızca bu oturumda kullanılır ve profile kaydedilmez. Çıkarma özgün görüntüyü gerektirmez ancak aynı anahtar ve protokol parametrelerini gerektirir.
-- Görünür ve gizli filigranlar birleştirilebilir: aynı nihai görüntü görünür filigranı gösterir ve gizli yükü verir. PNG/BMP/JPEG gidiş-dönüşleri ve iç dayanıklılık matrisi geçer. Gerçek dış yakalama karelerinden çıkarma henüz hedefi karşılamıyor; bu derlemede OBS/toplantı/sistem ekran görüntülerinden gizli filigran çıkarmaya güvenmeyin.
+- Yerel dosyalar ve kontrollü çerçeveli pencerenin gerçek masaüstü görüntüsünden GUI ile çıkarma doğrulandı. Ekranı veya vekili yakalayın; özgün pencereyi doğrudan yakalamak katmanları atlayabilir. Rastgele video, ekran fotoğrafı ve dönüşümler garanti edilmez.
 - "Ayarlar > Görüntü filigranı" yerel PNG/JPEG/BMP aracını açar. Kaynak dosya varsayılan olarak üzerine yazılmaz; üzerine yazma onay gerektirir. Çıkarılan yükü kopyalayabilir veya dışa aktarabilirsiniz. Dosyalar yüklenmez ve yük meta verilere değil piksellere yazılır.
 - Geometri, delta, JPEG kalitesi, döşeme/faz araması ve ilgili parametreler ölçekleme, kırpma veya bilinmeyen kaynaklı görüntüleri işler. Emin değilseniz varsayılanları koruyun.
 
@@ -98,7 +102,7 @@ Seçenekler:
 10. Sorun giderme ve uyumluluk
 - Hariç tutma/saydam yapma etkisizse önce arka ucu belirleyin. Farklı yakalama araçları farklı yollar kullanır ve bazıları görüntü ilişkisine uymaz.
 - Değiştirme, yalnızca yakalama veya B yolu başarısızsa Windows sürümünü (masaüstü kompozisyonu 10 2004+), hedefin opak üst düzey pencere olduğunu ve aracın çalıştığını doğrulayın.
-- Gizli filigran çıkarma başarısızsa gömme ile aynı algoritma, anahtar ve geometriyi doğrulayın. Gerçek dış yakalamadan çıkarma henüz geçmiyor; bkz. bölüm 5.
+- Filigran bulunamazsa anahtarı, kaynağı ve piksel boyutunu kontrol edin; yeniden boyutlandırmadan pencereye kırpın. Karo ve faz araması varsayılan açıktır; ölçek ipuçları gelişmiş parametrelerdedir.
 - Hedef görev çubuğu düğmesi yanlışsa "Hedef görev çubuğu düğmesini geri yükle" kullanın. Çıkışta uygulama oturumda değiştirilen stil bitlerini geri yüklemeye çalışır.
 - Profil bozuksa veya portable dizin salt okunursa uygulama geçerli profili değiştirmeyi reddeder. Yazılabilir bir "Farklı Kaydet" konumu seçin.
 - Windows 7 yalnızca kademeli yetenekler sunar; WDA_EXCLUDEFROMCAPTURE, WGC ve bazı masaüstü kompozisyonu yolları kullanılamaz. OBS/toplantılar, sistem ekran görüntüsü, Desktop Duplication ve pencere yakalama hedef ortamda ayrı doğrulanmalıdır.

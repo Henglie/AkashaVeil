@@ -197,7 +197,8 @@ const char* status_name(Status status) noexcept
 
 bool known_algorithm(std::uint8_t algorithm) noexcept
 {
-    return algorithm == kAlgorithmDctPairQim || algorithm == kAlgorithmDwtLh3Qim;
+    return algorithm == kAlgorithmDctPairQim || algorithm == kAlgorithmDwtLh3Qim
+        || algorithm == kAlgorithmRobustDct;
 }
 
 bool valid_key(const std::uint8_t* key, std::size_t key_length) noexcept

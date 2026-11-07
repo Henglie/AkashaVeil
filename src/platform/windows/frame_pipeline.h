@@ -177,6 +177,7 @@ struct FramePipelineConfig {
     std::uint32_t target_fps = 30;
     std::size_t max_frame_bytes = 256ull * 1024ull * 1024ull;
     bool force_opaque = true;
+    bool window_client_only = false;
     bool include_clean = true;
     ExplicitWatermarkSpec watermark;
     BlindWatermarkRequest hidden;

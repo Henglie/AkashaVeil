@@ -42,23 +42,29 @@
 
 ## 快速下载
 
-当前版本：**v0.1.0**。下载后直接运行对应架构的 EXE，无需安装 Python、Qt 或额外运行库。
+当前版本：**v0.1.1**。下载后直接运行对应架构的 EXE，无需安装 Python、Qt 或额外运行库。
 
 | 下载 | 适用平台 |
 |---|---|
-| [AkashaVeil-x64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.0/AkashaVeil-x64.exe) | 普通 Intel / AMD 64 位 Windows，优先选此项 |
-| [AkashaVeil-x86.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.0/AkashaVeil-x86.exe) | 32 位 Windows；也可在 x64 Windows 运行 |
-| [AkashaVeil-arm64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.0/AkashaVeil-arm64.exe) | Windows on ARM |
-| [完整压缩包](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.0/AkashaVeil-0.1.0-windows-all.zip) | 三架构 EXE、离线文档、许可与校验和 |
-| [SHA256SUMS.txt](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.0/SHA256SUMS.txt) | 发布文件的 SHA-256 校验和 |
+| [AkashaVeil-x64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-x64.exe) | 普通 Intel / AMD 64 位 Windows，优先选此项 |
+| [AkashaVeil-x86.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-x86.exe) | 32 位 Windows；也可在 x64 Windows 运行 |
+| [AkashaVeil-arm64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-arm64.exe) | Windows on ARM |
+| [完整压缩包](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-0.1.1-windows-all.zip) | 三架构 EXE、离线文档、许可与校验和 |
+| [SHA256SUMS.txt](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/SHA256SUMS.txt) | 发布文件的 SHA-256 校验和 |
 
 [所有发行版本](https://github.com/Henglie/AkashaVeil/releases) · [源码仓库](https://github.com/Henglie/AkashaVeil)
 
+国内下载：[夸克网盘](https://pan.quark.cn/s/b0bc1b050888) · [百度网盘](https://pan.baidu.com/s/1mmNK-2tSO4c_0qTj_HCILA?pwd=0000)（提取码：`0000`）。下载后可用对应版本的 `SHA256SUMS.txt` 核对文件。
+
 ## 更新日志
 
-### 0.1.0
+### 0.1.1
 
-开发完成，第一个正式版。
+- 新增 R-DCT：分布式密钥导频、字节空间交织、软判决和 RS 错误/擦除纠错，增强压缩、裁剪后的提取。
+- 接入图片水印、高级模式与捕获合成，保留 DCT / DWT 兼容、九语与轻量单 EXE。
+- 增加夸克 / 百度网盘下载入口，补齐参数、画质取舍与鲁棒性边界说明。
+- 修复关于页编辑框鼠标滑动时闪烁。
+- 高级功能按四组重排，显隐水印独立叠加；提取与写入分开，默认自动对齐。修复真实截图中的图层顺序和客户区缩放问题。
 
 完整历史见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -87,7 +93,7 @@
   - 显性水印：斜向平铺、居中、右下角标三种形式，可调不透明度、字号、间隔与颜色。
   - 显示范围：屏幕与捕获均可见、仅捕获可见。
   - 预设与字段：内置预设，支持 `{title}`、`{process}`、`{pid}`、`{time}`、`{id}` 字段，并带捕获预览。
-- **隐性水印**：DCT（QIM）与 DWT（Haar LH3）写入 / 提取，本地图片水印，32 字节载荷与本地密钥；显性与隐性可组合。
+- **隐性水印**：R-DCT 增强路线、DCT（QIM）与 DWT（Haar LH3）写入 / 提取，本地图片水印，32 字节载荷与本地密钥；显性与隐性可组合。R-DCT 使用分布式同步、空间交织和软判决纠错；画质与鲁棒性存在取舍，见[隐水印说明](docs/WATERMARK.md)。
 - **仅捕获替换路线（A / B）**：A 配合显示器捕获，B 提供可选择的受控捕获源窗口；不修改录屏或会议软件。纯色替身与仅捕获模式属于实验性桌面合成能力。
 - **档案**：保存 / 加载窗口规则、程序名单、布局与状态；重启后按精确身份重新匹配并恢复；CSV 元信息导出。
 - **偏好与自动化**：自动刷新、按规则 / 程序名单自动保护、就绪失败重试上限、托盘、关闭收起到托盘、隐藏本工具任务栏按钮、标题 / 托盘图标 / 提示随机化。
@@ -96,7 +102,7 @@
 
 ## 界面预览
 
-截图使用演示窗口，主列表中的可执行文件路径列已折叠。
+截图使用演示窗口，主列表中的可执行文件路径列已折叠，图片处理中的文件路径已脱敏。
 
 <p align="center"><img src="docs/images/main-dark.png" alt="主界面：窗口列表与右侧操作" width="88%" /></p>
 
@@ -127,7 +133,7 @@
 | x64 | `AkashaVeil-x64.exe` |
 | ARM64 | `AkashaVeil-arm64.exe` |
 
-三份产物各自独立、可单独复制运行，采用静态 CRT，运行只依赖系统的 Windows DLL。跨进程保护所需的自有辅助模块已包含在 EXE 内，使用时按需释放到 `%LOCALAPPDATA%/AkashaVeil/Runtime/`；缓存按模块内容区分，使用前校验字节并保持只读锁，重复运行复用缓存，损坏缓存会保留备份并由内嵌资源修复。当前版本 **0.1.0**。
+三份产物各自独立、可单独复制运行，采用静态 CRT，运行只依赖系统的 Windows DLL。跨进程保护所需的自有辅助模块已包含在 EXE 内，使用时按需释放到 `%LOCALAPPDATA%/AkashaVeil/Runtime/`；缓存按模块内容区分，使用前校验字节并保持只读锁，重复运行复用缓存，损坏缓存会保留备份并由内嵌资源修复。当前源码构建版本 **0.1.1**。
 
 公开源码默认不包含投喂图片；如持有产品负责人批准的私有图片，可追加 `-ContributionAsset <图片路径>` 将其嵌入关于页投喂入口。未提供时关于页显示缺失提示，不影响其他功能。
 
@@ -202,7 +208,7 @@ AkashaVeil --profile <配置文件>
 - `WDA_EXCLUDEFROMCAPTURE` 从 Windows 10 2004 起提供；Windows 7 按 `WDA_MONITOR` 处理，语义不同。
 - 防捕获效果依赖 DWM 与捕获后端，桌面 BitBlt 的受控测试不代表 OBS、会议共享、窗口捕获、独占全屏等后端已通过。
 - Windows 7 / ARM64 的本版产物没有完整目标真机验证记录；建议优先在 Windows 10 2004+ / Windows 11 使用，并以目标环境的实际结果为准。
-- 真实外部截图 / 录屏帧中的隐水印提取尚未达到可靠验收标准；本版请使用本地图片写入 / 提取链路，不把录屏后的可恢复性当作保证。
+- 已验证受控带标题栏窗口的桌面截图→GUI 提取，以及本地图片链路。直接抓取原窗口可能漏掉叠层；OBS、会议视频、手机拍屏和任意变换的恢复不作保证。
 
 ## 项目结构
 

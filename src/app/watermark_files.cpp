@@ -13,6 +13,7 @@
 
 #include "av/watermark/dct.h"
 #include "av/watermark/dwt.h"
+#include "av/watermark/robust.h"
 #include "av/watermark/types.h"
 
 namespace av::watermark_files {
@@ -157,8 +158,7 @@ void copy_protocol_payload(FileOutcome& outcome, const std::uint8_t* payload,
         outcome.payload.assign(payload, payload + count);
     }
     outcome.payload_bytes = static_cast<std::uint8_t>(count);
-    outcome.algorithm_used = algorithm == av::watermark::kAlgorithmDwtLh3Qim
-        ? Algorithm::dwt : Algorithm::dct;
+    outcome.algorithm_used = static_cast<Algorithm>(algorithm);
 }
 
 FileOutcome extract_one(const LoadedImage& image,
@@ -170,7 +170,7 @@ FileOutcome extract_one(const LoadedImage& image,
     outcome.width = image.width;
     outcome.height = image.height;
 
-    if (algorithm == Algorithm::dct) {
+    if (algorithm == Algorithm::dct || algorithm == Algorithm::robust_dct) {
         av::watermark::dct::ImageView view;
         view.width = image.width;
         view.height = image.height;
@@ -188,7 +188,9 @@ FileOutcome extract_one(const LoadedImage& image,
         extract_options.original_width = options.original_width;
         extract_options.original_height = options.original_height;
         extract_options.cancel = {cancel_requested, const_cast<CancelFlag*>(&cancel)};
-        const auto result = av::watermark::dct::extract(view, options.key.data(),
+        const auto extract = algorithm == Algorithm::robust_dct
+            ? &av::watermark::robust::extract : &av::watermark::dct::extract;
+        const auto result = extract(view, options.key.data(),
             options.key.size(), extract_options);
         outcome.status = map_watermark_status(result.status);
         outcome.sync_score = result.sync_score;
@@ -274,6 +276,7 @@ const wchar_t* algorithm_key(Algorithm algorithm) noexcept
     case Algorithm::auto_detect: return L"watermark.algorithm.auto";
     case Algorithm::dct: return L"watermark.algorithm.dct";
     case Algorithm::dwt: return L"watermark.algorithm.dwt";
+    case Algorithm::robust_dct: return L"watermark.algorithm.rdct";
     }
     return L"watermark.algorithm.auto";
 }
@@ -342,7 +345,8 @@ FileOutcome WatermarkFilesService::embed(const EmbedOptions& options, const Canc
         outcome.detail = L"input and output paths are required";
         return outcome;
     }
-    if (options.algorithm != Algorithm::dct && options.algorithm != Algorithm::dwt) {
+    if (options.algorithm != Algorithm::dct && options.algorithm != Algorithm::dwt
+        && options.algorithm != Algorithm::robust_dct) {
         outcome.status = StatusCode::invalid_argument;
         outcome.detail = L"embedding needs an explicit DCT or DWT algorithm";
         return outcome;
@@ -427,7 +431,7 @@ FileOutcome WatermarkFilesService::embed(const EmbedOptions& options, const Canc
     std::vector<std::uint8_t> payload = options.payload;
     const std::uint8_t* payload_data = payload.empty() ? nullptr : payload.data();
 
-    if (options.algorithm == Algorithm::dct) {
+    if (options.algorithm == Algorithm::dct || options.algorithm == Algorithm::robust_dct) {
         av::watermark::dct::MutableImageView view;
         view.width = image.width;
         view.height = image.height;
@@ -435,16 +439,19 @@ FileOutcome WatermarkFilesService::embed(const EmbedOptions& options, const Canc
         view.pixels = image.pixels.data();
         av::watermark::dct::EmbedOptions embed_options;
         embed_options.delta = options.delta;
+        if (options.algorithm == Algorithm::robust_dct) embed_options.worker_threads = 2;
         embed_options.cancel = {cancel_requested, const_cast<CancelFlag*>(&cancel)};
         av::watermark::dct::EmbedResult result;
-        const auto status = av::watermark::dct::embed(view, options.key.data(),
+        const auto embed = options.algorithm == Algorithm::robust_dct
+            ? &av::watermark::robust::embed : &av::watermark::dct::embed;
+        const auto status = embed(view, options.key.data(),
             options.key.size(), payload_data, payload.size(), embed_options, result);
         outcome.status = map_watermark_status(status);
         if (status != av::watermark::Status::success) {
             outcome.detail = widen_ascii(av::watermark::status_name(status));
             return outcome;
         }
-        outcome.algorithm_used = Algorithm::dct;
+        outcome.algorithm_used = options.algorithm;
     } else {
         LoadedImage output = image;
         av::watermark::ImageView input_view;
@@ -510,7 +517,7 @@ FileOutcome WatermarkFilesService::extract(const ExtractOptions& options,
         return outcome;
     }
     if (options.algorithm != Algorithm::auto_detect && options.algorithm != Algorithm::dct
-        && options.algorithm != Algorithm::dwt) {
+        && options.algorithm != Algorithm::dwt && options.algorithm != Algorithm::robust_dct) {
         outcome.status = StatusCode::invalid_argument;
         outcome.detail = L"unknown extraction algorithm";
         return outcome;
@@ -546,14 +553,17 @@ FileOutcome WatermarkFilesService::extract(const ExtractOptions& options,
         return outcome;
     }
 
-    if (options.algorithm == Algorithm::dct || options.algorithm == Algorithm::dwt) {
+    if (options.algorithm != Algorithm::auto_detect) {
         return extract_one(image, options, cancel, options.algorithm);
     }
 
+    FileOutcome robust = extract_one(image, options, cancel, Algorithm::robust_dct);
+    if (robust.status == StatusCode::success || robust.status == StatusCode::cancelled) return robust;
     FileOutcome dct = extract_one(image, options, cancel, Algorithm::dct);
     if (dct.status == StatusCode::cancelled) {
         return dct;
     }
+    if (dct.status == StatusCode::success) return dct;
     FileOutcome dwt = extract_one(image, options, cancel, Algorithm::dwt);
     if (dwt.status == StatusCode::cancelled) {
         return dwt;

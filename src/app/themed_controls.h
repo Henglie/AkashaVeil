@@ -47,6 +47,23 @@ struct ControlTheme {
     }
 
 private:
+    void paint_group(HWND hwnd,HDC dc) const {
+        const int saved=SaveDC(dc);
+        RECT area{}; GetClientRect(hwnd,&area);
+        SelectObject(dc,reinterpret_cast<HFONT>(SendMessageW(hwnd,WM_GETFONT,0,0)));
+        wchar_t title[256]{}; GetWindowTextW(hwnd,title,256);
+        SIZE size{}; GetTextExtentPoint32W(dc,title,lstrlenW(title),&size);
+        HBRUSH brush=CreateSolidBrush(palette.window_bg);
+        FillRect(dc,&area,brush);
+        const HPEN pen=CreatePen(PS_SOLID,1,palette.border);
+        const auto old_pen=SelectObject(dc,pen), old_brush=SelectObject(dc,GetStockObject(NULL_BRUSH));
+        Rectangle(dc,area.left,area.top+size.cy/2,area.right,area.bottom);
+        RECT caption{rtl ? area.right-size.cx-14 : 10,0,rtl ? area.right-10 : size.cx+14,size.cy+2};
+        FillRect(dc,&caption,brush); SetBkMode(dc,TRANSPARENT); SetTextColor(dc,palette.text);
+        DrawTextW(dc,title,-1,&caption,DT_SINGLELINE|DT_NOPREFIX|(rtl?DT_RTLREADING|DT_RIGHT:DT_LEFT));
+        SelectObject(dc,old_pen); SelectObject(dc,old_brush); DeleteObject(pen); DeleteObject(brush);
+        RestoreDC(dc,saved);
+    }
     void paint_tab(HWND hwnd, HDC dc) const {
         const int saved = SaveDC(dc);
         RECT area{}; GetClientRect(hwnd, &area);
@@ -183,12 +200,13 @@ private:
             || lstrcmpiW(name, L"#32770") == 0;
         const auto type = GetWindowLongPtrW(hwnd, GWL_STYLE) & BS_TYPEMASK;
         const bool check = !combo && (type == BS_AUTOCHECKBOX || type == BS_CHECKBOX);
-        const bool supported = tab || combo || (button && (check || type == BS_PUSHBUTTON || type == BS_DEFPUSHBUTTON));
+        const bool group=button && type==BS_GROUPBOX;
+        const bool supported = tab || combo || (button && (group || check || type == BS_PUSHBUTTON || type == BS_DEFPUSHBUTTON));
         if (theme->palette.dark && supported) {
             if (message == WM_PAINT || message == WM_PRINTCLIENT) {
                 PAINTSTRUCT ps{};
                 const HDC dc = message == WM_PAINT ? BeginPaint(hwnd, &ps) : reinterpret_cast<HDC>(wp);
-                if (tab) theme->paint_tab(hwnd, dc); else theme->paint(hwnd, dc, combo, check);
+                if (tab) theme->paint_tab(hwnd, dc); else if (group) theme->paint_group(hwnd,dc); else theme->paint(hwnd, dc, combo, check);
                 if (message == WM_PAINT) EndPaint(hwnd, &ps);
                 return 0;
             }
@@ -203,11 +221,14 @@ private:
                 HDC dc = GetWindowDC(hwnd); theme->paint_frame(hwnd, dc); ReleaseDC(hwnd, dc);
             }
         }
-        switch (message) {
+        // Native edits/list boxes already invalidate only their changed text
+        // and scroll regions. Full-client invalidation on hover or key events
+        // forces erase/repaint and visibly flashes long read-only documents.
+        if (theme->palette.dark && supported) switch (message) {
         case BM_SETCHECK: case BM_SETSTATE: case WM_ENABLE: case WM_SETFOCUS: case WM_KILLFOCUS:
         case WM_UPDATEUISTATE: case WM_LBUTTONDOWN: case WM_LBUTTONUP: case WM_KEYDOWN: case WM_KEYUP:
         case CB_SETCURSEL: case CB_SHOWDROPDOWN:
-        case TCM_SETCURSEL: case WM_MOUSEMOVE:
+        case TCM_SETCURSEL:
             InvalidateRect(hwnd, nullptr, FALSE); break;
         }
         return result;
