@@ -54,7 +54,7 @@
 
 [所有发行版本](https://github.com/Henglie/AkashaVeil/releases) · [源码仓库](https://github.com/Henglie/AkashaVeil)
 
-国内下载：[夸克网盘](https://pan.quark.cn/s/b0bc1b050888) · [百度网盘](https://pan.baidu.com/s/1mmNK-2tSO4c_0qTj_HCILA?pwd=0000)（提取码：`0000`）。下载后可用对应版本的 `SHA256SUMS.txt` 核对文件。
+国内下载：[百度网盘](https://pan.baidu.com/s/1mmNK-2tSO4c_0qTj_HCILA?pwd=0000)（提取码：`0000`） · [夸克网盘](https://pan.quark.cn/s/b0bc1b050888)。下载后可用对应版本的 `SHA256SUMS.txt` 核对文件。
 
 ## 更新日志
 
@@ -62,7 +62,7 @@
 
 - 新增 R-DCT：分布式密钥导频、字节空间交织、软判决和 RS 错误/擦除纠错，增强压缩、裁剪后的提取。
 - 接入图片水印、高级模式与捕获合成，保留 DCT / DWT 兼容、九语与轻量单 EXE。
-- 增加夸克 / 百度网盘下载入口，补齐参数、画质取舍与鲁棒性边界说明。
+- 增加百度网盘 / 夸克下载入口，补齐参数、画质取舍与鲁棒性边界说明。
 - 修复关于页编辑框鼠标滑动时闪烁。
 - 高级功能按四组重排，显隐水印独立叠加；提取与写入分开，默认自动对齐。修复真实截图中的图层顺序和客户区缩放问题。
 

@@ -39,7 +39,7 @@ Current release: **v0.1.1**. Each EXE is self-contained; no installer, Python, Q
 | [Complete ZIP](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-0.1.1-windows-all.zip) | All three architectures, offline documentation, license, and checksums |
 | [SHA256SUMS.txt](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/SHA256SUMS.txt) | SHA-256 checksums for release assets |
 
-China mirrors: [Quark Drive](https://pan.quark.cn/s/b0bc1b050888) · [Baidu Netdisk](https://pan.baidu.com/s/1mmNK-2tSO4c_0qTj_HCILA?pwd=0000) (access code: `0000`). Verify downloads against `SHA256SUMS.txt` for the matching release.
+China mirrors: [Baidu Netdisk](https://pan.baidu.com/s/1mmNK-2tSO4c_0qTj_HCILA?pwd=0000) (access code: `0000`) · [Quark Drive](https://pan.quark.cn/s/b0bc1b050888). Verify downloads against `SHA256SUMS.txt` for the matching release.
 
 ## Changelog
 
@@ -47,7 +47,7 @@ China mirrors: [Quark Drive](https://pan.quark.cn/s/b0bc1b050888) · [Baidu Netd
 
 - Added R-DCT with a distributed keyed pilot, byte-local spatial interleaving, soft decisions, and RS errors/erasures correction for improved compression/crop recovery.
 - Integrated local image files, advanced mode, and capture composition; retained legacy DCT / DWT, nine languages, and lightweight self-contained EXEs.
-- Added Quark / Baidu mirrors and documented parameter, image-quality, and robustness trade-offs.
+- Added Baidu / Quark mirrors and documented parameter, image-quality, and robustness trade-offs.
 - Fixed About text flickering during pointer movement by removing redundant full-client repaints and clipping overlapping siblings.
 - Reorganized advanced options into four groups with independent additive watermarks; split extraction and image writing, enabled alignment search by default, and fixed desktop layer order and pre-embedding client geometry.
 
