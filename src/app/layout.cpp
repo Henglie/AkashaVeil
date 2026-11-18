@@ -8,7 +8,6 @@ namespace {
 constexpr int id_filter = 100;
 constexpr int id_refresh = 101;
 constexpr int id_exclude = 102;
-constexpr int id_blank = 103;
 constexpr int id_restore = 104;
 constexpr int id_remember = 105;
 constexpr int id_save = 106;
@@ -79,9 +78,11 @@ const RectI* MainLayout::find(int id) const {
 MainLayout compute_main_layout(const MainLayoutSpec& spec) {
     MainLayout layout;
     layout.margin = scale_dip(8, spec.dpi);
-    layout.compact = spec.client_height < scale_dip(560, spec.dpi);
-    layout.gap = scale_dip(layout.compact ? 3 : 6, spec.dpi);
-    layout.button_height = scale_dip(layout.compact ? 23 : 26, spec.dpi);
+    // Keep the right column spacing fixed at every window size. Short windows
+    // scroll the column instead of switching to a different gap rhythm.
+    layout.compact = false;
+    layout.gap = scale_dip(6, spec.dpi);
+    layout.button_height = scale_dip(26, spec.dpi);
     layout.side_width = scale_dip(154, spec.dpi);
     for (const auto& button : spec.buttons) {
         if (button.id == id_clear_filter) continue;
@@ -107,58 +108,96 @@ MainLayout compute_main_layout(const MainLayoutSpec& spec) {
 
     Cursor cursor{layout, side_x + scale_dip(8, spec.dpi), layout.side_width - scale_dip(16, spec.dpi),
         layout.button_height, layout.gap};
-    int y = margin + scale_dip(20, spec.dpi);
+    const int label_height = scale_dip(16, spec.dpi);
+    const int section_top_gap = scale_dip(20, spec.dpi);
+    const int section_gap = scale_dip(14, spec.dpi);
+    const int section_padding = scale_dip(8, spec.dpi);
+
+    // Window actions. Every section uses the same header, button gap and
+    // bottom padding so the right column stays visually aligned.
+    const int action_top = layout.filter.top;
+    int y = action_top;
+    layout.action_bounds.top = action_top;
     cursor.single(id_exclude, y);
-    cursor.single(id_blank, y);
+    const int mode_height = scale_dip(54, spec.dpi);
+    layout.mode_group = {side_x + scale_dip(4, spec.dpi), y,
+        side_x + layout.side_width - scale_dip(4, spec.dpi), y + mode_height};
+    layout.mode_label = {layout.mode_group.left, y,
+        layout.mode_group.left + std::min(layout.mode_group.width(),
+            std::max(scale_dip(60, spec.dpi), spec.mode_label_width)), y + label_height};
+    const int radio_first = scale_dip(16, spec.dpi);
+    const int radio_row = scale_dip(14, spec.dpi);
+    layout.mode_transparent = {layout.mode_group.left + scale_dip(8, spec.dpi), y + radio_first,
+        layout.mode_group.right - scale_dip(8, spec.dpi), y + radio_first + radio_row};
+    layout.mode_black = {layout.mode_group.left + scale_dip(8, spec.dpi), y + radio_first + radio_row,
+        layout.mode_group.right - scale_dip(8, spec.dpi), y + radio_first + 2 * radio_row};
+    y += mode_height + layout.gap;
     cursor.single(id_effects, y);
-    y += scale_dip(4, spec.dpi);
     cursor.single(id_restore, y);
-    y += scale_dip(15, spec.dpi);
-    const int batch_label_width = std::max(scale_dip(90, spec.dpi), spec.batch_label_width);
-    layout.group_labels[2] = {side_x + scale_dip(7, spec.dpi), y - scale_dip(3, spec.dpi),
-        side_x + scale_dip(7, spec.dpi) + batch_label_width, y + scale_dip(15, spec.dpi)};
-    layout.separators[0] = {side_x + scale_dip(4, spec.dpi), y - scale_dip(7, spec.dpi),
-        side_x + layout.side_width - scale_dip(4, spec.dpi), y - scale_dip(6, spec.dpi)};
-    y += scale_dip(18, spec.dpi);
+    const int action_bottom = y - layout.gap + section_padding;
+    layout.action_bounds = {side_x, action_top, side_x + layout.side_width, action_bottom};
+
+    // Batch actions.
+    int section_top = action_bottom + section_gap;
+    layout.group_labels[2] = {side_x + scale_dip(7, spec.dpi), section_top,
+        side_x + scale_dip(7, spec.dpi) + std::max(scale_dip(90, spec.dpi), spec.batch_label_width),
+        section_top + label_height};
+    layout.separators[0] = {side_x + scale_dip(4, spec.dpi), section_top - scale_dip(6, spec.dpi),
+        side_x + layout.side_width - scale_dip(4, spec.dpi), section_top - scale_dip(5, spec.dpi)};
+    y = section_top + section_top_gap;
     cursor.pair(id_exclude_all, id_restore_all, y);
-    y += scale_dip(8, spec.dpi);
     cursor.pair(id_select_all, id_clear_selection, y);
     cursor.single(id_refresh, y);
+    const int batch_bottom = y - layout.gap + section_padding;
 
-    layout.action_bounds = {side_x, margin, side_x + layout.side_width, y + scale_dip(3, spec.dpi)};
-    layout.group_labels[0] = {side_x + scale_dip(7, spec.dpi), margin,
-        side_x + scale_dip(7, spec.dpi) + std::max(scale_dip(70, spec.dpi), spec.action_label_width),
-        margin + scale_dip(18, spec.dpi)};
-
-    const int profile_y = y + scale_dip(11, spec.dpi);
-    y = profile_y + scale_dip(20, spec.dpi);
+    // Profiles.
+    section_top = batch_bottom + section_gap;
+    layout.profile_bounds.top = section_top;
+    layout.group_labels[1] = {side_x + scale_dip(7, spec.dpi), section_top,
+        side_x + scale_dip(7, spec.dpi) + std::max(scale_dip(80, spec.dpi), spec.profile_label_width),
+        section_top + label_height};
+    layout.separators[1] = {side_x + scale_dip(4, spec.dpi), section_top - scale_dip(6, spec.dpi),
+        side_x + layout.side_width - scale_dip(4, spec.dpi), section_top - scale_dip(5, spec.dpi)};
+    y = section_top + section_top_gap;
     cursor.single(id_remember, y);
     cursor.single(id_apply_rules, y);
     cursor.single(id_geometry, y);
-    y += scale_dip(3, spec.dpi);
     cursor.pair(id_save, id_load, y);
     cursor.single(id_export_list, y);
+    const int profile_bottom = y - layout.gap + section_padding;
+    layout.profile_bounds = {side_x, layout.profile_bounds.top, side_x + layout.side_width, profile_bottom};
 
-    layout.profile_bounds = {side_x, profile_y, side_x + layout.side_width, y + scale_dip(3, spec.dpi)};
-    layout.separators[1] = {side_x + scale_dip(4, spec.dpi), profile_y - scale_dip(7, spec.dpi),
-        side_x + layout.side_width - scale_dip(4, spec.dpi), profile_y - scale_dip(6, spec.dpi)};
-    layout.group_labels[1] = {side_x + scale_dip(7, spec.dpi), profile_y,
-        side_x + scale_dip(7, spec.dpi) + std::max(scale_dip(80, spec.dpi), spec.profile_label_width),
-        profile_y + scale_dip(18, spec.dpi)};
-
-    const int bottom_y = std::max(y + scale_dip(9, spec.dpi),
-        spec.client_height - scale_dip(29, spec.dpi) - layout.button_height);
+    // Settings / About stay at the bottom when there is room; the aim control
+    // sits directly above them, centered, and both scroll together otherwise.
+    const int aim_size = scale_dip(44, spec.dpi);
+    const int sidebar_bottom = std::max(1, spec.client_height - scale_dip(29, spec.dpi));
+    const int bottom_anchor = sidebar_bottom - layout.button_height;
+    const int flow_top = profile_bottom + section_gap;
+    int bottom_y = std::max(flow_top + aim_size + layout.gap, bottom_anchor);
+    int aim_top = bottom_y - layout.gap - aim_size;
+    if (aim_top < flow_top) {
+        aim_top = flow_top;
+        bottom_y = aim_top + aim_size + layout.gap;
+    }
+    layout.aim = {side_x + (layout.side_width - aim_size) / 2, aim_top,
+        side_x + (layout.side_width - aim_size) / 2 + aim_size, aim_top + aim_size};
     int bottom_cursor = bottom_y;
     cursor.pair(id_settings, id_about, bottom_cursor);
 
-    layout.side_content_height = std::max(y, bottom_cursor);
-    layout.side_page_height = std::max(1, spec.client_height - 2 * margin);
-    layout.max_side_scroll = std::max(0, layout.side_content_height - layout.side_page_height);
+    layout.side_content_height = std::max(profile_bottom, bottom_y + layout.button_height);
+    layout.side_page_height = std::max(1, sidebar_bottom - margin);
+    layout.max_side_scroll = std::max(0, layout.side_content_height - sidebar_bottom);
     layout.side_scroll_needed = layout.max_side_scroll > 0;
     layout.button_count = cursor.index;
     layout.list.right = std::max(layout.list.left + 1, layout.list.right);
     layout.list.bottom = std::max(layout.list.top + 1, layout.list.bottom);
     return layout;
+}
+
+int minimum_main_client_height(const MainLayoutSpec& spec) {
+    MainLayoutSpec intrinsic = spec;
+    intrinsic.client_height = 0;
+    return compute_main_layout(intrinsic).side_content_height + scale_dip(29, spec.dpi);
 }
 
 DialogPlacement place_dialog(const RECT& work_area, const DialogSpec& spec, unsigned dpi) {

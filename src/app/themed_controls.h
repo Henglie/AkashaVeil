@@ -124,13 +124,13 @@ private:
         RestoreDC(dc, saved);
     }
 
-    void paint(HWND hwnd, HDC dc, bool combo, bool check) const {
+    void paint(HWND hwnd, HDC dc, bool combo, bool check, bool radio = false) const {
         const int saved = SaveDC(dc);
         RECT area{}; GetClientRect(hwnd, &area);
         const bool enabled = IsWindowEnabled(hwnd) != FALSE;
         const auto state = combo ? 0 : SendMessageW(hwnd, BM_GETSTATE, 0, 0);
         const bool pressed = !combo && (state & BST_PUSHED);
-        const COLORREF bg = check ? palette.window_bg : pressed ? palette.selected_bg : palette.field_bg;
+        const COLORREF bg = (check || radio) ? palette.window_bg : pressed ? palette.selected_bg : palette.field_bg;
         HBRUSH brush = CreateSolidBrush(bg);
         FillRect(dc, &area, brush); DeleteObject(brush);
         SelectObject(dc, reinterpret_cast<HFONT>(SendMessageW(hwnd, WM_GETFONT, 0, 0)));
@@ -139,21 +139,36 @@ private:
         TEXTMETRICW metrics{}; GetTextMetricsW(dc, &metrics);
         const int gap = std::max<int>(3, metrics.tmHeight / 3);
         RECT text = area;
-        if (check) {
+        if (check || radio) {
             const int size = std::max<int>(10, metrics.tmHeight - 2);
             RECT box{rtl ? area.right - size : area.left, (area.bottom - size) / 2,
                 rtl ? area.right : area.left + size, (area.bottom + size) / 2};
             brush = CreateSolidBrush(palette.field_bg); FillRect(dc, &box, brush); DeleteObject(brush);
-            brush = CreateSolidBrush(enabled ? palette.border : palette.muted_text);
-            FrameRect(dc, &box, brush); DeleteObject(brush);
+            const HPEN border_pen = CreatePen(PS_SOLID, 1, enabled ? palette.border : palette.muted_text);
+            const auto old_pen = SelectObject(dc, border_pen), old_brush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+            if (radio) Ellipse(dc, box.left, box.top, box.right, box.bottom);
+            else Rectangle(dc, box.left, box.top, box.right, box.bottom);
+            SelectObject(dc, old_brush);
             if (SendMessageW(hwnd, BM_GETCHECK, 0, 0) == BST_CHECKED) {
-                const HPEN pen = CreatePen(PS_SOLID, std::max(1, size / 8), enabled ? palette.text : palette.muted_text);
-                const auto old = SelectObject(dc, pen);
-                MoveToEx(dc, box.left + size / 5, box.top + size / 2, nullptr);
-                LineTo(dc, box.left + size * 2 / 5, box.top + size * 3 / 4);
-                LineTo(dc, box.left + size * 4 / 5, box.top + size / 4);
-                SelectObject(dc, old); DeleteObject(pen);
+                if (radio) {
+                    const int inset = std::max<int>(2, size / 4);
+                    brush = CreateSolidBrush(enabled ? palette.accent : palette.muted_text);
+                    RECT dot{box.left + inset, box.top + inset, box.right - inset, box.bottom - inset};
+                    HPEN dot_pen = CreatePen(PS_SOLID, 1, enabled ? palette.accent : palette.muted_text);
+                    const auto previous_pen = SelectObject(dc, dot_pen), previous_brush = SelectObject(dc, brush);
+                    Ellipse(dc, dot.left, dot.top, dot.right, dot.bottom);
+                    SelectObject(dc, previous_brush); SelectObject(dc, previous_pen);
+                    DeleteObject(dot_pen); DeleteObject(brush);
+                } else {
+                    const HPEN pen = CreatePen(PS_SOLID, std::max(1, size / 8), enabled ? palette.text : palette.muted_text);
+                    const auto old = SelectObject(dc, pen);
+                    MoveToEx(dc, box.left + size / 5, box.top + size / 2, nullptr);
+                    LineTo(dc, box.left + size * 2 / 5, box.top + size * 3 / 4);
+                    LineTo(dc, box.left + size * 4 / 5, box.top + size / 4);
+                    SelectObject(dc, old); DeleteObject(pen);
+                }
             }
+            SelectObject(dc, old_pen); DeleteObject(border_pen);
             if (rtl) text.right -= size + gap; else text.left += size + gap;
         } else {
             brush = CreateSolidBrush(GetFocus() == hwnd ? palette.focus : palette.border);
@@ -179,7 +194,7 @@ private:
         std::wstring caption(static_cast<std::size_t>(length) + 1, L'\0');
         GetWindowTextW(hwnd, caption.data(), length + 1);
         UINT flags = DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | (rtl ? DT_RTLREADING : 0);
-        flags |= (check || combo) ? (rtl ? DT_RIGHT : DT_LEFT) : DT_CENTER;
+        flags |= (check || radio || combo) ? (rtl ? DT_RIGHT : DT_LEFT) : DT_CENTER;
         if (SendMessageW(hwnd, WM_QUERYUISTATE, 0, 0) & UISF_HIDEACCEL) flags |= DT_HIDEPREFIX;
         if (pressed) OffsetRect(&text, 1, 1);
         DrawTextW(dc, caption.c_str(), -1, &text, flags);
@@ -200,13 +215,14 @@ private:
             || lstrcmpiW(name, L"#32770") == 0;
         const auto type = GetWindowLongPtrW(hwnd, GWL_STYLE) & BS_TYPEMASK;
         const bool check = !combo && (type == BS_AUTOCHECKBOX || type == BS_CHECKBOX);
+        const bool radio = !combo && (type == BS_AUTORADIOBUTTON || type == BS_RADIOBUTTON);
         const bool group=button && type==BS_GROUPBOX;
-        const bool supported = tab || combo || (button && (group || check || type == BS_PUSHBUTTON || type == BS_DEFPUSHBUTTON));
+        const bool supported = tab || combo || (button && (group || check || radio || type == BS_PUSHBUTTON || type == BS_DEFPUSHBUTTON));
         if (theme->palette.dark && supported) {
             if (message == WM_PAINT || message == WM_PRINTCLIENT) {
                 PAINTSTRUCT ps{};
                 const HDC dc = message == WM_PAINT ? BeginPaint(hwnd, &ps) : reinterpret_cast<HDC>(wp);
-                if (tab) theme->paint_tab(hwnd, dc); else if (group) theme->paint_group(hwnd,dc); else theme->paint(hwnd, dc, combo, check);
+                if (tab) theme->paint_tab(hwnd, dc); else if (group) theme->paint_group(hwnd,dc); else theme->paint(hwnd, dc, combo, check, radio);
                 if (message == WM_PAINT) EndPaint(hwnd, &ps);
                 return 0;
             }

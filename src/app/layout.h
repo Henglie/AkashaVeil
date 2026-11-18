@@ -30,6 +30,7 @@ struct MainLayoutSpec {
     int action_label_width = 0;
     int profile_label_width = 0;
     int batch_label_width = 0;
+    int mode_label_width = 0;
     std::vector<ButtonMetric> buttons;
 };
 
@@ -39,6 +40,8 @@ struct MainLayout {
     RectI group_labels[3];
     RectI separators[2];
     RectI action_bounds, profile_bounds;
+    RectI mode_group, mode_label, mode_transparent, mode_black;
+    RectI aim;
     RectI buttons[64];
     int ids[64] = {};
     int button_count = 0;
@@ -49,6 +52,7 @@ struct MainLayout {
 };
 
 MainLayout compute_main_layout(const MainLayoutSpec& spec);
+int minimum_main_client_height(const MainLayoutSpec& spec);
 
 struct DialogSpec {
     int content_width_dip = 0;

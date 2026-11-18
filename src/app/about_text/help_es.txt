@@ -4,7 +4,7 @@ Opciones avanzadas: contenido capturado, marca visible, marca oculta y salida/vi
 
 1. Inicio rápido
 1. A la izquierda se listan ventanas o procesos. Use las pestañas para cambiar de vista y el cuadro de filtro para buscar por título, nombre de proceso o ruta.
-2. Seleccione una o varias filas y use Proteger seleccionadas o Hacer transparente la selección. Restaurar seleccionadas revierte la afinidad de pantalla aplicada por esta herramienta.
+2. Seleccione una o varias filas, elija el esquema de protección a la derecha de la ventana principal y pulse Proteger seleccionadas. Para aplicar otro esquema, vuelva a pulsar Proteger seleccionadas. Restaurar seleccionadas revierte la afinidad de pantalla aplicada por esta herramienta.
 3. Proteger todo y Restaurar todo actúan sobre todas las filas del resultado filtrado actual. El resumen bajo la lista muestra filas, filas seleccionadas y ventanas de destino.
 4. Pulse los encabezados de columna para ordenar. La lista admite selección múltiple con Ctrl/Mayús, Ctrl+A y borrado de la selección.
 5. Atajos: Ctrl+H protege; Ctrl+U restaura; Ctrl+A selecciona todo con la lista enfocada; Ctrl+S guarda el perfil; Ctrl+O carga el perfil; Ctrl+E exporta la lista; Ctrl+P preferencias; Ctrl+W Modo avanzado; Ctrl+F enfoca el filtro; Ctrl+R o F5 actualiza; Esc limpia el filtro; F1 abre esta ayuda. Tab/Mayús+Tab mueven el foco entre controles.

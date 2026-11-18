@@ -44,8 +44,8 @@ inline RulesDialogStrings rules_dialog_strings(const std::wstring& language) {
     s.duplicate = text(Text::rules_duplicate, language);
     s.no_selection = text(Text::rules_no_selection, language);
     s.mode_none = text(Text::rules_mode_none, language);
-    s.mode_blank = text(Text::rules_mode_blank, language);
-    s.mode_exclude = text(Text::rules_mode_exclude, language);
+    s.mode_blank = text_key(L"mode.black", language);
+    s.mode_exclude = text_key(L"mode.transparent", language);
     s.replacement_none = text(Text::rules_replacement_none, language);
     s.replacement_solid = text(Text::rules_replacement_solid, language);
     s.replacement_label_kind = text(Text::rules_replacement_label_kind, language);

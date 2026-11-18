@@ -4,7 +4,7 @@ Options avancées : contenu capturé, filigrane visible, filigrane caché, sorti
 
 1. Démarrage rapide
 1. La partie gauche liste les fenêtres ou processus. Utilisez les onglets pour changer de vue et le filtre pour rechercher par titre, nom de processus ou chemin.
-2. Sélectionnez une ou plusieurs lignes, puis Protéger la sélection ou Rendre la sélection transparente. Restaurer la sélection annule l'affinité d'affichage définie par cet outil.
+2. Sélectionnez une ou plusieurs lignes, choisissez le schéma de protection à droite de la fenêtre principale, puis cliquez sur Protéger la sélection. Cliquez de nouveau sur ce bouton pour appliquer un autre schéma. Restaurer la sélection annule l'affinité d'affichage définie par cet outil.
 3. Tout protéger et Tout restaurer agissent sur toutes les lignes du résultat filtré courant. Le résumé sous la liste affiche les lignes, la sélection et les fenêtres cibles.
 4. Cliquez sur les en-têtes de colonne pour trier. La liste prend en charge la sélection multiple Ctrl/Maj, Ctrl+A et l'effacement de la sélection.
 5. Raccourcis : Ctrl+H protège ; Ctrl+U restaure ; Ctrl+A sélectionne tout lorsque la liste a le focus ; Ctrl+S enregistre le profil ; Ctrl+O charge le profil ; Ctrl+E exporte la liste ; Ctrl+P préférences ; Ctrl+W Mode avancé ; Ctrl+F place le focus sur le filtre ; Ctrl+R ou F5 actualise ; Échap efface le filtre ; F1 ouvre cette aide. Tab/Maj+Tab déplacent le focus entre les contrôles.

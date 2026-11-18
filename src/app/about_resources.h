@@ -2,8 +2,8 @@
 #pragma once
 
 // Resource identifiers used by the About/Help/Contribution entry. The
-// integration CMake script generates a matching RC file; private assets are
-// referenced only at build time and never by a source literal.
+// integration CMake script generates a matching RC file. The default
+// contribution image lives under src/app/assets and ships with the source.
 #define IDI_AV_APP 101
 
 #define IDR_AV_ABOUT_TEXT_ZH 501

@@ -1,7 +1,7 @@
 AkashaVeil is a local Windows window capture-prevention and watermark manager.
 
 Main capabilities
-• Enumerate windows and processes, protect or make transparent the selected windows, and restore them at any time. The UI shows the state read back from the system.
+• Enumerate windows and processes, protect the selected windows with the default scheme (transparent or blacked out), and restore them at any time. The UI shows the state read back from the system.
 • Visible watermark: diagonal tiles, centered, or bottom-right; adjustable text, colors, font size, spacing, and opacity; presets and {title} {process} {pid} {time} {id} fields.
 • Original content (watermark only): the local screen and captured frames keep the original content, with the watermark drawn according to the selected audience.
 • Replacement: solid color or text placeholder. Like capture-only watermarking, this is an experimental desktop-composition path that requires Windows 10 2004+, DWM, and an opaque top-level window.

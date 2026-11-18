@@ -70,6 +70,11 @@ MainLayout mirror_main_layout(const MainLayout& layout, int client_width) {
     mirrored.status = mirror_rect(layout.status, client_width);
     mirrored.action_bounds = mirror_rect(layout.action_bounds, client_width);
     mirrored.profile_bounds = mirror_rect(layout.profile_bounds, client_width);
+    mirrored.mode_group = mirror_rect(layout.mode_group, client_width);
+    mirrored.mode_label = mirror_rect(layout.mode_label, client_width);
+    mirrored.mode_transparent = mirror_rect(layout.mode_transparent, client_width);
+    mirrored.mode_black = mirror_rect(layout.mode_black, client_width);
+    mirrored.aim = mirror_rect(layout.aim, client_width);
     for (int i = 0; i < 3; ++i) mirrored.group_labels[i] = mirror_rect(layout.group_labels[i], client_width);
     for (int i = 0; i < 2; ++i) mirrored.separators[i] = mirror_rect(layout.separators[i], client_width);
     for (int i = 0; i < layout.button_count; ++i) mirrored.buttons[i] = mirror_rect(layout.buttons[i], client_width);
@@ -92,7 +97,7 @@ bool layout_boxes_overlap(const MainLayout& layout) {
 
 int minimum_client_width(const MainLayoutSpec& spec, TextDirection direction) {
     const MainLayout probe = compute_main_layout(spec);
-    const int width = probe.side_width + 2 * probe.margin + scale_dip(220, spec.dpi);
+    const int width = probe.side_width + 3 * probe.margin + scale_dip(220, spec.dpi);
     (void)direction;
     return width;
 }

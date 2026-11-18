@@ -11,6 +11,7 @@ try {
 $ErrorActionPreference = 'Stop'
 $env:VSLANG = '1033'
 $root = Split-Path -Parent $PSScriptRoot
+if (-not $ContributionAsset) { $ContributionAsset = Join-Path $root 'src/app/assets/contribution.jpg' }
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
 $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
 if (-not $vs) { throw 'Visual Studio C++ tools not found.' }
@@ -42,7 +43,7 @@ foreach ($line in $environment) {
 $guiFlag = if ($Gui) { 'ON' } else { 'OFF' }
 $testFlag = if ($Gui -and (Test-Path -LiteralPath (Join-Path $root 'tests/tests.cpp'))) { 'ON' } else { 'OFF' }
 if ($Test -and $Gui -and $testFlag -eq 'OFF') { throw 'Optional test sources are unavailable in this source tree.' }
-$contributionFlag = if ($ContributionAsset) { 'ON' } else { 'OFF' }
+$contributionFlag = 'ON'
 $arguments = @('-S',$root,'-B',$Build,'-G','Ninja',"-DCMAKE_BUILD_TYPE=$Config","-DCMAKE_MAKE_PROGRAM=$ninja","-DAV_BUILD_GUI=$guiFlag","-DBUILD_TESTING=$testFlag","-DAV_CONTRIBUTION_ASSET=$ContributionAsset","-DAV_REQUIRE_CONTRIBUTION_ASSET=$contributionFlag")
 if ($Gui) { $arguments += "-DAV_PAYLOAD_DIR=$payloads" }
 & $cmake @arguments

@@ -4,7 +4,7 @@
 
 <h1 align="center">AkashaVeil · 凌空罩</h1>
 
-<p align="center"><b>A local Windows window-capture protection and watermark manager.</b><br/>Protect, blank, or restore selected windows; add visible or hidden watermarks. No background networking, uploads, telemetry, or device fingerprinting.</p>
+<p align="center"><b>Make a window disappear from screenshots and recordings — or put a watermark on it.</b><br/>Runs entirely on your PC. One EXE. No network, no uploads.</p>
 
 <p align="center">
   <a href="https://github.com/Henglie/AkashaVeil/releases"><img src="https://img.shields.io/github/v/release/Henglie/AkashaVeil?style=flat-square" alt="Release" /></a>
@@ -12,144 +12,125 @@
   <a href="https://github.com/Henglie/AkashaVeil/stargazers"><img src="https://img.shields.io/github/stars/Henglie/AkashaVeil?style=flat-square" alt="Stars" /></a>
 </p>
 
-> [!NOTE]
-> The application processes window metadata, settings, and watermark data on your computer. Its GitHub button opens your default browser only when you click it.
-
 > [!WARNING]
-> Capture protection depends on Windows, the target renderer, permissions, and the capture backend. Verify the actual screenshot or recording before relying on it. Use the tool only on devices and windows you are authorized to manage.
+> Use it only on devices and windows you are allowed to manage. Results depend on Windows and on the capture app. Check a real screenshot or recording before relying on it.
 
-## Contents
+## Demo
 
-- [Download](#download) · [Changelog](#changelog)
-- [Features](#features) · [Screenshots](#screenshots)
-- [Quick start](#quick-start) · [Command line](#command-line)
-- [Keyboard shortcuts](#keyboard-shortcuts) · [Compatibility and limits](#compatibility-and-limits)
-- [Build](#build) · [Privacy and local data](#privacy-and-local-data)
-- [Documentation and feedback](#documentation-and-feedback) · [License](#license)
+**The window disappears from a screenshot:**
+
+<img src="docs/images/demo-capture-protection.gif" width="100%" alt="Screenshot protection demo" />
+
+**The window stays out of a screen recording:**
+
+<img src="docs/images/demo-recording-protection.gif" width="100%" alt="Recording protection demo" />
+
+## What it does
+
+- Select a window, click **Protect selected**, and it is excluded from screenshots and recordings.
+- Choose **Window transparent** (background only) or **Window blacked out** (black block). Transparent is the default; change it in the **Default protection scheme** group on the main window.
+- Drag the aim icon above **Settings / About** onto a window and release to select it without searching the list.
+- Advanced mode can replace captured content with a solid color or text, add a visible watermark, or embed a hidden watermark.
+- Rules, automatic protection, tray mode, nine UI languages, and light/dark themes are included.
 
 ## Download
 
-Current release: **v0.1.1**. Each EXE is self-contained; no installer, Python, Qt, or separate runtime is required.
+Current release: **v0.1.2**. Each EXE runs directly; no installer, Python, Qt, or runtime is required.
 
-| File | Platform |
+| Download | Notes |
 |---|---|
-| [AkashaVeil-x64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-x64.exe) | Intel / AMD 64-bit Windows; recommended for most PCs |
-| [AkashaVeil-x86.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-x86.exe) | 32-bit Windows; also runs on x64 Windows |
-| [AkashaVeil-arm64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-arm64.exe) | Windows on ARM |
-| [Complete ZIP](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/AkashaVeil-0.1.1-windows-all.zip) | All three architectures, offline documentation, license, and checksums |
-| [SHA256SUMS.txt](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.1/SHA256SUMS.txt) | SHA-256 checksums for release assets |
+| [Baidu Netdisk](https://pan.baidu.com/s/1mmNK-2tSO4c_0qTj_HCILA?pwd=0000) | Access code `0000` |
+| [Quark Drive](https://pan.quark.cn/s/b0bc1b050888) | Backup mirror for users in China |
+| [AkashaVeil-x64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.2/AkashaVeil-x64.exe) | Most Intel / AMD 64-bit PCs |
+| [AkashaVeil-x86.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.2/AkashaVeil-x86.exe) | 32-bit Windows; also runs on 64-bit Windows |
+| [AkashaVeil-arm64.exe](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.2/AkashaVeil-arm64.exe) | Windows on ARM |
+| [Complete ZIP](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.2/AkashaVeil-0.1.2-windows-all.zip) | All architectures, offline docs, license, and checksums |
+| [SHA256SUMS.txt](https://github.com/Henglie/AkashaVeil/releases/download/v0.1.2/SHA256SUMS.txt) | Checksums for release files |
 
-China mirrors: [Baidu Netdisk](https://pan.baidu.com/s/1mmNK-2tSO4c_0qTj_HCILA?pwd=0000) (access code: `0000`) · [Quark Drive](https://pan.quark.cn/s/b0bc1b050888). Verify downloads against `SHA256SUMS.txt` for the matching release.
+[All releases](https://github.com/Henglie/AkashaVeil/releases) · [Source repository](https://github.com/Henglie/AkashaVeil)
 
-## Changelog
+## How to use
 
-### 0.1.1
+1. Open the app and select a window in the list. Or drag the aim icon above **Settings / About** onto the target window.
+2. Click **Protect selected**. The default scheme is **Window transparent**; switch to **Window blacked out** in the **Default protection scheme** group on the main window.
+3. Take a screenshot or record your screen with the app you normally use, and check the result.
+4. Select the window and click **Restore selected** when you no longer need protection.
 
-- Added R-DCT with a distributed keyed pilot, byte-local spatial interleaving, soft decisions, and RS errors/erasures correction for improved compression/crop recovery.
-- Integrated local image files, advanced mode, and capture composition; retained legacy DCT / DWT, nine languages, and lightweight self-contained EXEs.
-- Added Baidu / Quark mirrors and documented parameter, image-quality, and robustness trade-offs.
-- Fixed About text flickering during pointer movement by removing redundant full-client repaints and clipping overlapping siblings.
-- Reorganized advanced options into four groups with independent additive watermarks; split extraction and image writing, enabled alignment search by default, and fixed desktop layer order and pre-embedding client geometry.
+To change the scheme for a window that is already protected, choose the new scheme on the main window and click **Protect selected** again.
 
-See [CHANGELOG.md](CHANGELOG.md) for the release history.
-
-## Features
-
-- **Native, compact UI:** Win32 / GDI+, application icons, alternating rows, filtering, column sorting, multiple selection, and refresh that preserves selection and focus.
-- **Window and process views:** act on individual windows or the currently enumerated windows belonging to a process.
-- **Protect / Transparent / Restore:** request system display affinity and show the state read back from Windows. “Transparent” describes captured content; it does not make the local desktop window translucent. Depending on the backend, the captured result may be blank or black.
-- **Advanced mode:** original content, capture exclusion, blanking, solid replacement, or a text placeholder; tiled, centered, and corner watermarks; configurable colors, opacity, font size, spacing, and presets.
-- **Local fields:** `{title}`, `{process}`, `{pid}`, `{time}`, and a user-entered `{id}`.
-- **Capture-only routes:** display capture (A) or a controlled capture-source window (B). Desktop-composition replacement and capture-only modes are experimental.
-- **Hidden watermarks:** enhanced R-DCT plus legacy DCT / QIM and DWT / Haar LH3; local PNG / JPEG / BMP workflows; payloads up to 32 UTF-8 bytes; keys are not saved in profiles. R-DCT adds distributed synchronization, spatial interleaving, and soft-decision error correction. Greater robustness introduces more fine texture; see [watermark details](docs/WATERMARK.md).
-- **Profiles and automation:** rules, program lists, geometry, state, CSV export, automatic protection / refresh, tray behavior, taskbar options, and title / tray randomization.
-- **Nine UI languages:** Simplified Chinese, English, Spanish, French, Russian, Arabic (RTL), Turkish, Japanese, and Korean. Missing translations and Traditional Chinese system defaults fall back to English.
-- **Light / dark / system themes**, DPI-aware layout, CLI, JSON output, and keyboard shortcuts.
+For replacement content or watermarks, select a window and open **Advanced mode**. Apply the settings, then verify with a real screenshot.
 
 ## Screenshots
 
-The screenshots use demonstration windows with the executable-path column collapsed.
+<p align="center"><img src="docs/images/main-dark.png" alt="Main window" width="92%" /></p>
 
-![Main window, dark theme](docs/images/main-dark.png)
-
-| Advanced mode | Local image watermark |
+| Advanced mode | Image watermark |
 |---|---|
 | ![Advanced mode](docs/images/advanced.png) | ![Image watermark](docs/images/image-watermark.png) |
 
 [Light theme](docs/images/main-light.png)
 
-## Quick start
+## Changelog
 
-1. Run the EXE for your Windows architecture.
-2. Select a window or process, then use **Protect selected**, **Transparent selected**, or **Restore selected**.
-3. Open **Advanced mode** with `Ctrl+W` for watermarks and replacement content. Review the preview, then apply.
-4. Use **Remember selected** and **Save** to retain rules. Configure automatic protection in Preferences only when needed.
-5. Verify the result using your intended capture tool. To end the application, use **Exit** in its settings or tray menu; closing the main window normally minimizes it to the tray.
+### 0.1.2
 
-## Command line
+- Merged the main actions into one **Protect selected** button that follows the default protection scheme (transparent or blacked out), selectable on the main window.
+- Added a draggable aim icon centered above **Settings / About**: hover for instructions, drag onto a window, and release to select it.
+- Fixed overlapping controls in the upper-right area of Advanced mode when switching capture content, and reduced unnecessary repaints.
+- Improved main-window resizing and updated the minimum height to fit the new layout.
+- The public source tree now includes the contribution image and embeds it in normal builds.
+- Rewrote the README and feature article, added demo GIFs, mirror links, and the Linux.do community note.
 
-```powershell
-.\AkashaVeil-x64.exe list --json
-.\AkashaVeil-x64.exe protect --process 1234 --json
-.\AkashaVeil-x64.exe restore --window 0x00123456 --json
-.\AkashaVeil-x64.exe --version --json
-.\AkashaVeil-x64.exe --profile ".\profiles\demo.ini"
-```
+See [CHANGELOG.md](CHANGELOG.md) for full history.
 
-Replace the sample PID / HWND with a current target. `list` enumerates top-level windows, including process information; it does not produce one record per unique process. HWND input is hexadecimal, with an optional `0x` prefix. `hide` / `exclude` alias `protect`, and `unhide` aliases `restore`.
+## Compatibility
 
-Exit codes: **0** success, **2** syntax, **3** no target, **4** partial failure, **5** all failed, **6** timeout / cancellation. JSON reports should be checked together with the process exit code. CLI protection uses the system capture-affinity path; it does not configure advanced watermarks.
-
-## Keyboard shortcuts
-
-| Shortcut | Action |
-|---|---|
-| `Ctrl+H` / `Ctrl+U` | Protect / restore selected |
-| `Ctrl+A` | Select all when the list has focus |
-| `Ctrl+S` / `Ctrl+O` / `Ctrl+E` | Save / load profile / export list |
-| `Ctrl+P` / `Ctrl+W` | Preferences / advanced mode |
-| `Ctrl+F` | Focus the filter |
-| `Ctrl+R` / `F5` | Refresh |
-| `Esc` | Clear a focused filter; cancel / close a dialog |
-| `F1` | Offline help |
-
-## Compatibility and limits
-
-- Windows desktop only. Windows 10 2004+ / Windows 11 is recommended. Older systems use reduced capabilities; Windows 7 does not provide `WDA_EXCLUDEFROMCAPTURE` and uses `WDA_MONITOR` with different semantics.
-- Windows 7 and ARM64 binaries do not have complete target-machine validation records for this release. ARM64 cross-compilation is not a native-device test.
-- An elevated target normally requires running AkashaVeil at the same privilege level. Cross-process display-affinity changes use short-lived architecture-matched helper modules and a window-thread hook. The capture-only composition pipeline does not modify the recording application.
-- Desktop BitBlt results do not establish compatibility with OBS, meeting sharing, window capture, exclusive fullscreen, or every graphics renderer.
-- A controlled framed-window desktop screenshot -> GUI extraction workflow and local image files have been verified. Direct capture of the original window may omit overlays; recovery from arbitrary OBS/meeting video, camera recapture, or transformations is not guaranteed.
-- No kernel driver, cloud account, or complete attribution service is included. A watermark payload is not proof of identity or ownership.
+- Windows 7 and later with reduced capabilities; Windows 10 2004+ / Windows 11 recommended.
+- x86, x64, and ARM64 builds. Windows 7 and ARM64 do not have complete real-device validation records.
+- Capture results vary by screenshot/recording backend. Test OBS, meeting sharing, window capture, and desktop capture separately.
+- Hidden-watermark recovery from phone-camera photos, print/scan, arbitrary rotation, or perspective is not guaranteed.
 
 ## Build
 
-Install Visual Studio C++ desktop tools, the Windows SDK, CMake, and Ninja; include x86 / x64 / ARM64 cross-compilers.
+Install Visual Studio C++ desktop tools (x86 / x64 / ARM64), CMake, and Ninja.
 
 ```powershell
-git clone https://github.com/Henglie/AkashaVeil.git
-cd AkashaVeil
-.\tools\build.ps1 -Architecture all -Configuration Release
+./tools/build.ps1 -Architecture all -Configuration Release
 ```
 
-Output: `build/standalone/AkashaVeil-{x86,x64,arm64}.exe`. The public source tree builds without optional verification sources. The application uses static CRT; all six helper modules are embedded resources.
+Output: `build/standalone/AkashaVeil-{x86,x64,arm64}.exe`. Static CRT; only system DLLs are required at runtime.
 
-The approved contribution image is a private build input, not part of the source distribution. An optional `-ContributionAsset <image-path>` embeds it; builds without the asset show an unavailable message in that dialog and retain the other features.
+## Command line
 
-## Privacy and local data
+```text
+AkashaVeil list [--json]
+AkashaVeil protect --process <PID> [--json]
+AkashaVeil protect --window  <HWND> [--json]
+AkashaVeil restore --process <PID> [--json]
+AkashaVeil restore --window  <HWND> [--json]
+AkashaVeil --version [--json]
+AkashaVeil --profile <file>
+```
 
-- No background networking, automatic updates, uploads, telemetry, or device fingerprinting.
-- Default profile: `%APPDATA%/AkashaVeil/profile.ini`. Use `--profile <file>` for an explicit profile; `portable.ini` next to the EXE selects portable storage.
-- Helper cache: `%LOCALAPPDATA%/AkashaVeil/Runtime/`. Embedded modules are verified before reuse. “Single EXE” does not mean no local cache files are created.
-- Profiles and CSV exports can contain window titles, executable paths, and user-entered watermark payloads. Hidden-watermark keys stay in memory for the operation and are not written to the profile.
-- Clicking **GitHub** in About opens the public repository in your default browser; browsing is subject to that browser's network behavior.
+See [CLI documentation](docs/CLI.md) for options, exit codes, and JSON fields.
+
+## Privacy
+
+- Fully local: no network, uploads, telemetry, or device fingerprinting.
+- Window data and settings stay on this computer. Hidden-watermark keys are never written to the profile.
+- The contribution image is included with the program and embedded at build time; it contains no private paths or contact details.
+
+## Community
+
+This project recognizes the [Linux.do community](https://linux.do).
 
 ## Documentation and feedback
 
-The application includes nine-language offline help (`F1`). Additional guides: [documentation index](docs/README.md), [user guide](docs/USER_GUIDE.md), [CLI / JSON](docs/CLI.md), [FAQ](docs/FAQ.md), [feature article](介绍文章.md), and [contributing](CONTRIBUTING.md).
-
-[Report an issue](https://github.com/Henglie/AkashaVeil/issues) with the app version, Windows version, architecture, capture backend, reproduction steps, and expected / actual results. Remove private titles, paths, and keys from attachments.
+- [Documentation index](docs/README.md) · [User guide](docs/USER_GUIDE.md)
+- [CLI / JSON](docs/CLI.md) · [FAQ](docs/FAQ.md)
+- [Feature article](介绍文章.md) · [Contributing](CONTRIBUTING.md) · [Release checklist](发布清单.md)
+- [Report an issue](https://github.com/Henglie/AkashaVeil/issues) with version, Windows version, capture app, steps, and actual result. Remove private titles, paths, and keys before posting.
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE). Copyright 2026 Henglie / EternalBlaze. Voluntary support is available in About and does not unlock or restrict any feature.
+Apache License 2.0. See [LICENSE](LICENSE). Copyright 2026 Henglie / EternalBlaze. Voluntary support is available in About and does not unlock any feature.

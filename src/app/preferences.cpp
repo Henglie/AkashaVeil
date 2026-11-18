@@ -60,7 +60,8 @@ struct State {
                 style=(style&~static_cast<LONG_PTR>(SS_TYPEMASK))|(rtl?SS_RIGHT:SS_LEFT);
                 SetWindowLongPtrW(entry.hwnd,GWL_STYLE,style);
             }
-            if (lstrcmpW(cls,L"Button")==0 && (style&BS_TYPEMASK)==BS_AUTOCHECKBOX) {
+            const auto type=style&BS_TYPEMASK;
+            if (lstrcmpW(cls,L"Button")==0 && (type==BS_AUTOCHECKBOX || type==BS_AUTORADIOBUTTON || type==BS_RADIOBUTTON)) {
                 style = rtl ? (style|BS_LEFTTEXT) : (style&~static_cast<LONG_PTR>(BS_LEFTTEXT));
                 SetWindowLongPtrW(entry.hwnd,GWL_STYLE,style);
             }
@@ -136,7 +137,6 @@ struct State {
     void populate() {
         for (const auto& check : checks) CheckDlgButton(dialog,check.id,draft.preferences.*(check.member) ? BST_CHECKED : BST_UNCHECKED);
         SetDlgItemInt(dialog,501,draft.preferences.refresh_ms,FALSE); SetDlgItemInt(dialog,523,draft.preferences.window_wait_ms,FALSE);
-        SendDlgItemMessageW(dialog,524,CB_SETCURSEL,draft.preferences.auto_mode==Mode::blank ? 0 : 1,0);
         programs(); dependencies();
     }
     bool read(Profile& candidate) {
@@ -149,7 +149,6 @@ struct State {
             value=static_cast<unsigned>(n); return true;
         };
         if (!number(501,100,60000,candidate.preferences.refresh_ms) || !number(523,0,60000,candidate.preferences.window_wait_ms)) return false;
-        candidate.preferences.auto_mode=SendDlgItemMessageW(dialog,524,CB_GETCURSEL,0,0)==0 ? Mode::blank : Mode::exclude;
         return candidate.preferences.programs.size()<=256;
     }
     void create() {
@@ -176,9 +175,6 @@ struct State {
         for (const auto& check : checks) make(check.page,L"BUTTON",check.id,tr(check.label),BS_AUTOCHECKBOX|BS_MULTILINE|WS_TABSTOP,8,check.y,check.id==500 ? 200 : 342,13);
         make(0,WC_EDITW,501,L"",WS_TABSTOP|ES_NUMBER,215,6,62,14);
         make(0,L"STATIC",0,tr(Text::milliseconds),0,284,7,52,14);
-        make(1,L"STATIC",0,tr(Text::pref_mode),0,8,62,124,14);
-        HWND mode=make(1,WC_COMBOBOXW,524,L"",WS_TABSTOP|CBS_DROPDOWNLIST,138,60,196,70);
-        SendMessageW(mode,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(tr(Text::blanked))); SendMessageW(mode,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(tr(Text::excluded)));
         make(1,L"STATIC",0,tr(Text::pref_wait),0,8,82,200,14);
         make(1,WC_EDITW,523,L"",WS_TABSTOP|ES_NUMBER,215,80,62,14); make(1,L"STATIC",0,tr(Text::milliseconds),0,284,81,52,14);
         make(1,L"STATIC",0,tr(Text::pref_programs),0,8,101,330,14);

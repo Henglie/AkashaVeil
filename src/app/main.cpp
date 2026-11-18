@@ -7,6 +7,7 @@
 #include "app/rtl_layout.h"
 #include "app/preferences.h"
 #include "app/effects_dialog.h"
+#include "app/themed_controls.h"
 #include "app/watermark_files_dialog.h"
 #include "app/rules_dialog.h"
 #include "app/about.h"
@@ -79,7 +80,8 @@ enum Id {
     self_exclude, self_restore, select_all, clear_selection, view_windows, view_processes,
     settings = 300, tabs, action_group, profile_group, exclude_all, restore_all, preferences, show_window,
     effects, selection_summary, batch_group, clear_filter, watermark_files,
-    rules_dialog, target_taskbar_hide, target_taskbar_show, help = 400
+    rules_dialog, target_taskbar_hide, target_taskbar_show, pick_window,
+    mode_group, mode_transparent, mode_black, help = 400
 };
 struct Result {
     bool enumeration = false;
@@ -93,13 +95,18 @@ struct Result {
 };
 LRESULT CALLBACK header_procedure(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
 LRESULT CALLBACK tab_procedure(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
+struct App;
+LRESULT CALLBACK aim_control_procedure(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK pick_overlay_procedure(HWND, UINT, WPARAM, LPARAM);
 struct App {
     HWND hwnd = nullptr, list = nullptr, edit = nullptr, status = nullptr, tab = nullptr, tips = nullptr;
+    HWND pick_overlay = nullptr, pick_target = nullptr, pending_pick = nullptr, aim_control = nullptr;
     HINSTANCE instance = nullptr;
+    bool picking = false, aim_hover = false, aim_pressed = false;
     HFONT font = nullptr;
     HBRUSH background = nullptr, surface = nullptr;
     COLORREF bg = 0, fg = 0, panel = 0;
-    RECT action_rect{}, profile_rect{};
+    RECT action_rect{}, profile_rect{}, mode_rect{};
     UINT dpi = 96;
     bool rtl = false;
     int side_scroll = 0;
@@ -113,6 +120,12 @@ struct App {
     std::atomic_bool cancel{false};
     bool working = false, process_view = false, dark = false;
     bool force_exit = false, preferences_open = false, shown = false, auto_initialized = false;
+    bool mode_theme_ready = false, syncing_mode = false, in_size_move = false;
+    int layout_width = 0, layout_height = 0;
+    av::ui::MainLayoutSpec layout_metrics;
+    bool column_cache_valid = false;
+    int last_column_widths[5]{};
+    int last_column_order[5]{};
     bool taskbar_style_dirty = false, initial_dpi_pending = true;
     av::AutoTracker auto_tracker;
     av::Tray tray;
@@ -130,6 +143,7 @@ struct App {
     HIMAGELIST images = nullptr;
     std::map<std::wstring,int> icon_cache;
     av::EffectLayers layers;
+    av::ui::ControlTheme main_theme;
     struct CaptureSession {
         std::unique_ptr<av::CaptureOnlyRenderSession> session;
         av::Window window;
@@ -174,6 +188,7 @@ struct App {
     }
     ~App() {
         stop_all_sessions();
+        if (pick_overlay) DestroyWindow(pick_overlay);
         if (worker.joinable()) worker.join();
         if (images) ImageList_Destroy(images);
         if (font) DeleteObject(font);
@@ -181,6 +196,117 @@ struct App {
         if (surface) DeleteObject(surface);
     }
     void message(const std::wstring& s) { SetWindowTextW(status, s.c_str()); }
+    av::Mode preferred_mode() const {
+        return profile.preferences.auto_mode == av::Mode::blank ? av::Mode::blank : av::Mode::exclude;
+    }
+    void sync_mode_checks() {
+        const bool black=profile.preferences.auto_mode==av::Mode::blank;
+        syncing_mode=true;
+        SendMessageW(GetDlgItem(hwnd,mode_transparent),BM_SETCHECK,black?BST_UNCHECKED:BST_CHECKED,0);
+        SendMessageW(GetDlgItem(hwnd,mode_black),BM_SETCHECK,black?BST_CHECKED:BST_UNCHECKED,0);
+        syncing_mode=false;
+    }
+    void update_pick_overlay() {
+        if (!pick_target || !IsWindow(pick_target)) {
+            if (pick_overlay) ShowWindow(pick_overlay, SW_HIDE);
+            return;
+        }
+        RECT target{};
+        if (!GetWindowRect(pick_target, &target)) return;
+        const int width = static_cast<int>(target.right - target.left);
+        const int height = static_cast<int>(target.bottom - target.top);
+        if (width < 2 || height < 2) return;
+        if (!pick_overlay) {
+            WNDCLASSEXW cls{sizeof(cls)};
+            cls.lpfnWndProc = pick_overlay_procedure;
+            cls.hInstance = instance;
+            cls.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+            cls.lpszClassName = L"Henglie.AkashaVeil.PickOverlay";
+            RegisterClassExW(&cls);
+            pick_overlay = CreateWindowExW(
+                WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
+                cls.lpszClassName, L"", WS_POPUP, 0, 0, 0, 0, hwnd, nullptr, instance, nullptr);
+            if (!pick_overlay) return;
+            SetLayeredWindowAttributes(pick_overlay, 0, 190, LWA_ALPHA);
+        }
+        const int pad = std::max(1, px(2));
+        const int band = std::max(2, px(3));
+        SetWindowPos(pick_overlay, HWND_TOPMOST, target.left - pad, target.top - pad,
+            width + 2 * pad, height + 2 * pad, SWP_NOACTIVATE);
+        HRGN outer = CreateRectRgn(0, 0, width + 2 * pad, height + 2 * pad);
+        HRGN inner = CreateRectRgn(band, band, width + 2 * pad - band, height + 2 * pad - band);
+        CombineRgn(outer, outer, inner, RGN_DIFF);
+        DeleteObject(inner);
+        SetWindowRgn(pick_overlay, outer, TRUE);
+        ShowWindow(pick_overlay, SW_SHOWNOACTIVATE);
+        InvalidateRect(pick_overlay, nullptr, TRUE);
+    }
+    void begin_pick() {
+        if (working) { message(tr(Text::busy)); return; }
+        picking = true;
+        pick_target = nullptr;
+        if (pick_overlay) ShowWindow(pick_overlay, SW_HIDE);
+        SetCursor(LoadCursorW(nullptr, IDC_CROSS));
+        message(av::text_key(L"pick.hint", language));
+    }
+    void update_pick() {
+        if (!picking) return;
+        POINT point{};
+        if (!GetCursorPos(&point)) return;
+        HWND hit = WindowFromPoint(point);
+        if (hit) hit = GetAncestor(hit, GA_ROOT);
+        if (hit) {
+            DWORD pid = 0;
+            GetWindowThreadProcessId(hit, &pid);
+            RECT area{};
+            if (pid == GetCurrentProcessId() || !IsWindowVisible(hit) || IsIconic(hit)
+                || !GetWindowRect(hit, &area) || area.right <= area.left || area.bottom <= area.top)
+                hit = nullptr;
+        }
+        if (hit == pick_target) return;
+        pick_target = hit;
+        update_pick_overlay();
+    }
+    bool select_window(HWND target) {
+        for (std::size_t row = 0; row < rows.size(); ++row) {
+            if (windows[rows[row]].handle != reinterpret_cast<std::uintptr_t>(target)) continue;
+            ListView_SetItemState(list, -1, 0, LVIS_SELECTED);
+            ListView_SetItemState(list, static_cast<int>(row), LVIS_SELECTED | LVIS_FOCUSED,
+                LVIS_SELECTED | LVIS_FOCUSED);
+            ListView_EnsureVisible(list, static_cast<int>(row), FALSE);
+            SetFocus(list);
+            selection_changed();
+            return true;
+        }
+        return false;
+    }
+    void announce_picked(HWND target) {
+        wchar_t title[512]{};
+        GetWindowTextW(target, title, 512);
+        message(std::wstring(av::text_key(L"pick.selected", language))
+            + (title[0] ? L": " + std::wstring(title) : L""));
+    }
+    void finish_pick() {
+        picking = false;
+        if (pick_overlay) ShowWindow(pick_overlay, SW_HIDE);
+        HWND target = pick_target;
+        pick_target = nullptr;
+        SetCursor(LoadCursorW(nullptr, IDC_ARROW));
+        if (!target) { message(av::text_key(L"pick.cancelled", language)); return; }
+        if (process_view) command(view_windows);
+        if (GetWindowTextLengthW(edit) > 0) SetWindowTextW(edit, L"");
+        else render();
+        if (select_window(target)) { announce_picked(target); return; }
+        pending_pick = target;
+        refresh_list();
+    }
+    void cancel_pick() {
+        picking = false;
+        pick_target = nullptr;
+        if (pick_overlay) ShowWindow(pick_overlay, SW_HIDE);
+        SetCursor(LoadCursorW(nullptr, IDC_ARROW));
+        message(av::text_key(L"pick.cancelled", language));
+    }
     void selection_changed() {
         if (rendering) return;
         const auto targets=selected();
@@ -193,7 +319,7 @@ struct App {
         put(0, rows.size()); put(1, static_cast<std::size_t>(ListView_GetSelectedCount(list))); put(2, targets.size());
         SetWindowTextW(GetDlgItem(hwnd,selection_summary),text.c_str());
         if (working) return;
-        for (const int id : {exclude,blank,restore,remember,effects}) EnableWindow(GetDlgItem(hwnd,id),!targets.empty());
+        for (const int id : {exclude,restore,remember,effects}) EnableWindow(GetDlgItem(hwnd,id),!targets.empty());
         for (const int id : {exclude_all,restore_all,select_all,export_list}) EnableWindow(GetDlgItem(hwnd,id),!rows.empty());
         EnableWindow(GetDlgItem(hwnd,clear_selection),!targets.empty());
         for (const int id : {apply_rules,geometry}) EnableWindow(GetDlgItem(hwnd,id),!profile.rules.empty());
@@ -428,7 +554,9 @@ struct App {
         update_session_timer();
     }
     std::wstring state_for(const av::Window& w) const {
-        auto result=std::wstring(tr(!w.affinity_known ? Text::unknown : w.mode==av::Mode::exclude ? Text::excluded : w.mode==av::Mode::blank ? Text::blanked : Text::normal));
+        auto result=std::wstring(!w.affinity_known ? tr(Text::unknown) : w.mode==av::Mode::exclude
+            ? av::text_key(L"state.transparent",language) : w.mode==av::Mode::blank
+            ? av::text_key(L"state.black",language) : tr(Text::normal));
         if (const auto* e=layers.get(w)) {
             if (layers.problem(w)) return result+L" + "+tr(Text::error);
             if (e->cover!=av::Cover::none) result=tr(e->cover==av::Cover::solid ? Text::solid_cover : Text::label_cover);
@@ -605,41 +733,56 @@ struct App {
         DestroyMenu(menu);
         if (selected_id) command(static_cast<int>(selected_id));
     }
-    av::ui::MainLayoutSpec layout_spec(int client_width, int client_height) {
+    void measure_layout() {
         av::ui::MainLayoutSpec spec;
-        spec.client_width = client_width;
-        spec.client_height = client_height;
         spec.dpi = dpi;
         HDC dc = GetDC(hwnd);
         const auto old = dc ? SelectObject(dc, font) : nullptr;
         for (const auto button : buttons) {
-            wchar_t label[256]{}; GetWindowTextW(button, label, 256);
-            SIZE size{}; if (dc) GetTextExtentPoint32W(dc, label, static_cast<int>(std::wcslen(label)), &size);
-            spec.buttons.push_back({GetDlgCtrlID(button), size.cx});
+            const int id = GetDlgCtrlID(button);
+            wchar_t label[256]{};
+            if (id != refresh) GetWindowTextW(button, label, 256);
+            const auto* caption = id == refresh ? tr(Text::refresh) : label;
+            SIZE size{}; if (dc) GetTextExtentPoint32W(dc, caption, lstrlenW(caption), &size);
+            spec.buttons.push_back({id, size.cx});
         }
         auto measure = [&](Text key) {
             SIZE size{};
             if (dc) GetTextExtentPoint32W(dc, tr(key), lstrlenW(tr(key)), &size);
             return size.cx + px(12);
         };
+        auto measure_key = [&](const wchar_t* text) {
+            SIZE size{};
+            if (dc) GetTextExtentPoint32W(dc, text, lstrlenW(text), &size);
+            return size.cx + px(12);
+        };
         spec.action_label_width = measure(Text::actions);
         spec.profile_label_width = measure(Text::profiles);
         spec.batch_label_width = measure(Text::filtered_actions);
+        spec.mode_label_width = measure_key(av::text_key(L"pref.scheme",language));
         if (dc) { if (old) SelectObject(dc, old); ReleaseDC(hwnd, dc); }
-        return spec;
+        layout_metrics = std::move(spec);
     }
     av::ui::MainLayout current_layout(int client_width, int client_height) {
-        return av::ui::resolve_main_layout(layout_spec(client_width, client_height),
+        layout_metrics.client_width = client_width;
+        layout_metrics.client_height = client_height;
+        return av::ui::resolve_main_layout(layout_metrics,
             rtl ? av::ui::TextDirection::rtl : av::ui::TextDirection::ltr);
     }
-    int minimum_window_width() {
-        av::ui::MainLayoutSpec spec = layout_spec(0, 0);
-        spec.client_width = av::ui::minimum_client_width(spec,
-            rtl ? av::ui::TextDirection::rtl : av::ui::TextDirection::ltr);
-        spec.client_height = px(540);
-        RECT frame{0, 0, spec.client_width, spec.client_height};
-        AdjustWindowRectEx(&frame, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, FALSE, 0);
-        return std::max<int>(px(760), frame.right - frame.left);
+    POINT minimum_window_size() {
+        RECT frame{0, 0, av::ui::minimum_client_width(layout_metrics),
+            av::ui::minimum_main_client_height(layout_metrics)};
+        constexpr DWORD style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
+        using AdjustForDpi = BOOL(WINAPI*)(LPRECT, DWORD, BOOL, DWORD, UINT);
+        static const auto adjust = reinterpret_cast<AdjustForDpi>(
+            GetProcAddress(GetModuleHandleW(L"user32.dll"),"AdjustWindowRectExForDpi"));
+        if (!adjust || !adjust(&frame,style,FALSE,WS_EX_CONTROLPARENT,dpi))
+            AdjustWindowRectEx(&frame,style,FALSE,WS_EX_CONTROLPARENT);
+        LONG height = frame.bottom - frame.top;
+        MONITORINFO monitor{sizeof(monitor)};
+        if (GetMonitorInfoW(MonitorFromWindow(hwnd,MONITOR_DEFAULTTONEAREST),&monitor))
+            height = std::min(height, monitor.rcWork.bottom - monitor.rcWork.top);
+        return {std::max<LONG>(px(760), frame.right - frame.left), height};
     }
     void layout() {
         RECT r{}; GetClientRect(hwnd, &r);
@@ -648,35 +791,100 @@ struct App {
         side_scroll = std::clamp(side_scroll, 0, std::max(0, layout.max_side_scroll));
         if (!layout.side_scroll_needed) side_scroll = 0;
         const int shift = side_scroll;
-        MoveWindow(tab, layout.tab.left, layout.tab.top, layout.tab.width(), layout.tab.height(), TRUE);
-        MoveWindow(GetDlgItem(hwnd,clear_filter), layout.clear_filter.left, layout.clear_filter.top,
-            layout.clear_filter.width(), layout.clear_filter.height(), TRUE);
-        MoveWindow(edit, layout.filter.left, layout.filter.top, layout.filter.width(), layout.filter.height(), TRUE);
-        MoveWindow(list, layout.list.left, layout.list.top, layout.list.width(), layout.list.height(), TRUE);
-        MoveWindow(GetDlgItem(hwnd,selection_summary), layout.summary.left, layout.summary.top,
-            layout.summary.width(), layout.summary.height(), TRUE);
-        MoveWindow(status, layout.status.left, layout.status.top, layout.status.width(), layout.status.height(), TRUE);
+        struct Placement { HWND control; av::ui::RectI rect; UINT flags; };
+        std::array<Placement, 64> placements{};
+        unsigned count = 0;
+        auto move = [&](HWND control, av::ui::RectI rect, bool scrolled = false) {
+            if (!control) return;
+            if (scrolled) { rect.top -= shift; rect.bottom -= shift; }
+            RECT previous{}; GetWindowRect(control, &previous);
+            MapWindowPoints(nullptr, hwnd, reinterpret_cast<POINT*>(&previous), 2);
+            const bool same_position = previous.left == rect.left && previous.top == rect.top;
+            const bool same_size = previous.right - previous.left == rect.width()
+                && previous.bottom - previous.top == rect.height();
+            if (same_position && same_size) return;
+            const UINT flags = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER
+                | (same_position ? SWP_NOMOVE : 0) | (same_size ? SWP_NOSIZE : 0);
+            placements[count++] = {control, rect, flags};
+        };
+        move(tab, layout.tab);
+        move(GetDlgItem(hwnd,clear_filter), layout.clear_filter);
+        move(edit, layout.filter);
+        move(list, layout.list);
+        move(GetDlgItem(hwnd,selection_summary), layout.summary);
+        move(status, layout.status);
+        move(aim_control, layout.aim, true);
         auto place = [&](int id, const av::ui::RectI& rect, bool scrolled) {
-            const int top = rect.top - (scrolled ? shift : 0);
-            MoveWindow(GetDlgItem(hwnd,id), rect.left, top, rect.width(), rect.height(), TRUE);
+            move(GetDlgItem(hwnd,id), rect, scrolled);
         };
         for (int i = 0; i < layout.button_count; ++i) place(layout.ids[i], layout.buttons[i], true);
-        place(action_group, layout.group_labels[0], true);
+        place(mode_group, layout.mode_label, true);
+        place(mode_transparent, layout.mode_transparent, true);
+        place(mode_black, layout.mode_black, true);
         place(profile_group, layout.group_labels[1], true);
         place(batch_group, layout.group_labels[2], true);
+        auto update_frame = [&](RECT& previous, const av::ui::RectI& rect) {
+            const RECT next{rect.left, rect.top - shift, rect.right, rect.bottom - shift};
+            if (EqualRect(&previous, &next)) return;
+            InvalidateRect(hwnd, &previous, FALSE);
+            InvalidateRect(hwnd, &next, FALSE);
+            previous = next;
+        };
+        update_frame(mode_rect, layout.mode_group);
+        update_frame(profile_rect, layout.profile_bounds);
         action_rect = {layout.action_bounds.left, layout.action_bounds.top - shift,
             layout.action_bounds.right, layout.action_bounds.bottom - shift};
-        profile_rect = {layout.profile_bounds.left, layout.profile_bounds.top - shift,
-            layout.profile_bounds.right, layout.profile_bounds.bottom - shift};
+        if (layout_width != r.right || layout_height != r.bottom) {
+            const RECT previous{px(8), layout_height - px(25), layout_width - px(8), layout_height - px(25) + 1};
+            const RECT next{px(8), r.bottom - px(25), r.right - px(8), r.bottom - px(25) + 1};
+            InvalidateRect(hwnd, &previous, FALSE);
+            InvalidateRect(hwnd, &next, FALSE);
+            layout_width = r.right; layout_height = r.bottom;
+        }
+        if (count) {
+            HDWP batch = BeginDeferWindowPos(static_cast<int>(count));
+            for (unsigned i = 0; batch && i < count; ++i) {
+                const auto& p = placements[i];
+                batch = DeferWindowPos(batch, p.control, nullptr, p.rect.left, p.rect.top,
+                    p.rect.width(), p.rect.height(), p.flags);
+            }
+            // A failed DeferWindowPos discards the batch. Apply the same diff as fallback.
+            if (!batch || !EndDeferWindowPos(batch)) for (unsigned i = 0; i < count; ++i) {
+                const auto& p = placements[i];
+                SetWindowPos(p.control, nullptr, p.rect.left, p.rect.top, p.rect.width(), p.rect.height(), p.flags);
+            }
+        }
+        // Keep column geometry stable throughout interactive resizing. Updating
+        // it per pixel repeatedly lays out and repaints every visible list row.
+        if (in_size_move) return;
         const int left_width = std::max<int>(1, layout.list.width());
         const int title_width = std::max(px(155), left_width*36/100);
         const int widths[] = {title_width, px(56), px(84), px(152), std::max(px(155), left_width-title_width-px(304))};
-        for (int i=0;i<5;++i) ListView_SetColumnWidth(list,i,widths[i]);
         int order[5]{};
         const auto visual = av::ui::visual_column_order(rtl ? av::ui::TextDirection::rtl : av::ui::TextDirection::ltr, 5);
-        for (int i=0;i<5;++i) order[i]=visual[static_cast<std::size_t>(i)];
-        SendMessageW(list, LVM_SETCOLUMNORDERARRAY, 5, reinterpret_cast<LPARAM>(order));
-        InvalidateRect(hwnd, nullptr, TRUE);
+        bool order_changed=!column_cache_valid;
+        for (int i=0;i<5;++i) {
+            order[i]=visual[static_cast<std::size_t>(i)];
+            if (last_column_order[i]!=order[i]) order_changed=true;
+        }
+        bool widths_changed = false;
+        for (int i=0;i<5;++i) if (last_column_widths[i]!=widths[i]) widths_changed=true;
+        if (!widths_changed && !order_changed) return;
+        // Suppress intermediate list/header paints while committing column changes.
+        const bool visible = (GetWindowLongPtrW(list,GWL_STYLE) & WS_VISIBLE) != 0;
+        if (visible) SendMessageW(list,WM_SETREDRAW,FALSE,0);
+        for (int i=0;i<5;++i) {
+            if (last_column_widths[i]==widths[i]) continue;
+            ListView_SetColumnWidth(list,i,widths[i]);
+            last_column_widths[i]=widths[i];
+        }
+        if (order_changed) {
+            for (int i=0;i<5;++i) last_column_order[i]=order[i];
+            column_cache_valid=true;
+            SendMessageW(list, LVM_SETCOLUMNORDERARRAY, 5, reinterpret_cast<LPARAM>(order));
+        }
+        if (visible) SendMessageW(list,WM_SETREDRAW,TRUE,0);
+        RedrawWindow(list,nullptr,nullptr,RDW_INVALIDATE|RDW_FRAME|RDW_ALLCHILDREN);
     }
     bool scroll_side_buttons(int delta) {
         RECT r{}; GetClientRect(hwnd, &r);
@@ -703,16 +911,50 @@ struct App {
         if (randomized_title.empty()) randomized_title=av::random_label();
         const std::wstring title = profile.preferences.random_title ? randomized_title : std::wstring(tr(Text::title)) + L"  " AV_VERSION + (av::is_administrator() ? L" [" + std::wstring(tr(Text::administrator)) + L"]" : L"");
         SetWindowTextW(hwnd, title.c_str()); SendMessageW(edit, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(tr(Text::filter)));
-        const std::pair<Id, Text> labels[] = {{refresh,Text::refresh},{exclude,Text::exclude},{blank,Text::blank},{restore,Text::restore},
+        const std::pair<Id, Text> labels[] = {{refresh,Text::refresh},{exclude,Text::exclude},{restore,Text::restore},
             {remember,Text::remember},{save,Text::save},{load,Text::load},{geometry,Text::geometry},{apply_rules,Text::apply_rules},
             {export_list,Text::export_list},{select_all,Text::select_all},{clear_selection,Text::clear_selection},
             {exclude_all,Text::exclude_all},{restore_all,Text::restore_all},{settings,Text::settings},{about,Text::about},
-            {action_group,Text::actions},{profile_group,Text::profiles},{effects,Text::effects},{batch_group,Text::filtered_actions}};
+            {profile_group,Text::profiles},{effects,Text::effects},{batch_group,Text::filtered_actions}};
         for (auto [id, key] : labels) SetWindowTextW(GetDlgItem(hwnd, id), tr(key));
         SetWindowTextW(GetDlgItem(hwnd,clear_filter),L"×");
+        SetWindowTextW(GetDlgItem(hwnd,mode_group),av::text_key(L"pref.scheme",language));
+        SetWindowTextW(GetDlgItem(hwnd,mode_transparent),av::text_key(L"mode.transparent",language));
+        SetWindowTextW(GetDlgItem(hwnd,mode_black),av::text_key(L"mode.black",language));
+        sync_mode_checks();
+        auto set_reading = [&](HWND control, bool value) {
+            if (!control) return;
+            auto ex = GetWindowLongPtrW(control, GWL_EXSTYLE);
+            ex = value ? (ex | WS_EX_RTLREADING) : (ex & ~static_cast<LONG_PTR>(WS_EX_RTLREADING));
+            SetWindowLongPtrW(control, GWL_EXSTYLE, ex);
+        };
+        main_theme.palette=palette; main_theme.rtl=rtl;
+        for (const int id : {mode_transparent,mode_black}) {
+            const HWND control=GetDlgItem(hwnd,id);
+            if (!control) continue;
+            if (mode_theme_ready) SetWindowTheme(control,dark?L"":L"Explorer",nullptr);
+            else main_theme.apply(control);
+            set_reading(control,rtl);
+            auto ex=GetWindowLongPtrW(control,GWL_EXSTYLE);
+            ex=rtl && !dark ? (ex|WS_EX_LAYOUTRTL) : (ex&~static_cast<LONG_PTR>(WS_EX_LAYOUTRTL));
+            SetWindowLongPtrW(control,GWL_EXSTYLE,ex);
+            InvalidateRect(control,nullptr,TRUE);
+        }
+        mode_theme_ready=true;
+        if (aim_control) InvalidateRect(aim_control,nullptr,TRUE);
         if (tips) {
-            for (auto [id,key] : {std::pair<int,Text>{exclude,Text::protection_tip},{blank,Text::protection_tip},{effects,Text::effects},{restore,Text::restore_tip},{exclude_all,Text::all_tip},{restore_all,Text::all_tip},{clear_filter,Text::clear_filter}}) {
+            for (auto [id,key] : {std::pair<int,Text>{exclude,Text::protection_tip},{effects,Text::effects},{restore,Text::restore_tip},{exclude_all,Text::all_tip},{restore_all,Text::all_tip},{clear_filter,Text::clear_filter}}) {
                 TOOLINFOW tool{sizeof(tool)}; tool.hwnd=hwnd; tool.uId=reinterpret_cast<UINT_PTR>(GetDlgItem(hwnd,id)); tool.lpszText=const_cast<wchar_t*>(tr(key));
+                SendMessageW(tips,TTM_UPDATETIPTEXTW,0,reinterpret_cast<LPARAM>(&tool));
+            }
+            if (aim_control) {
+                TOOLINFOW tool{sizeof(tool)}; tool.hwnd=hwnd; tool.uId=reinterpret_cast<UINT_PTR>(aim_control);
+                tool.lpszText=const_cast<wchar_t*>(av::text_key(L"pick.hint",language));
+                SendMessageW(tips,TTM_UPDATETIPTEXTW,0,reinterpret_cast<LPARAM>(&tool));
+            }
+            {
+                TOOLINFOW tool{sizeof(tool)}; tool.hwnd=hwnd; tool.uId=reinterpret_cast<UINT_PTR>(GetDlgItem(hwnd,exclude));
+                tool.lpszText=const_cast<wchar_t*>(av::text_key(L"protect.tip",language));
                 SendMessageW(tips,TTM_UPDATETIPTEXTW,0,reinterpret_cast<LPARAM>(&tool));
             }
         }
@@ -722,12 +964,6 @@ struct App {
             SetWindowLongPtrW(button,GWL_STYLE,style); SetWindowTheme(button,dark ? L"" : L"Explorer",nullptr);
             InvalidateRect(button,nullptr,TRUE);
         }
-        auto set_reading = [&](HWND control, bool value) {
-            if (!control) return;
-            auto ex = GetWindowLongPtrW(control, GWL_EXSTYLE);
-            ex = value ? (ex | WS_EX_RTLREADING) : (ex & ~static_cast<LONG_PTR>(WS_EX_RTLREADING));
-            SetWindowLongPtrW(control, GWL_EXSTYLE, ex);
-        };
         set_reading(edit, rtl);
         set_reading(status, rtl);
         set_reading(GetDlgItem(hwnd, selection_summary), rtl);
@@ -741,7 +977,8 @@ struct App {
         TabCtrl_SetCurSel(tab,process_view ? 1 : 0); InvalidateRect(tab,nullptr,TRUE);
         const Text columns[] = {process_view ? Text::process_name : Text::window_title, Text::process, Text::architecture, Text::capture, Text::path};
         for (int i = 0; i < 5; ++i) { LVCOLUMNW c{}; c.mask = LVCF_TEXT; c.pszText = const_cast<wchar_t*>(tr(columns[i])); ListView_SetColumn(list, i, &c); }
-        render(); layout();
+        measure_layout();
+        render(); layout(); InvalidateRect(hwnd,nullptr,FALSE);
         if (!working) message(std::wstring(tr(Text::ready))+L" · "+std::to_wstring(windows.size())+L" · "+tr(Text::rules)+L": "+std::to_wstring(profile.rules.size()));
     }
     std::vector<av::Window> selected() const {
@@ -811,6 +1048,8 @@ struct App {
         if (worker.joinable()) worker.join();
         working = true; cancel = false; message(tr(Text::busy));
         for (const auto button : buttons) EnableWindow(button,FALSE);
+        if (aim_control) EnableWindow(aim_control,FALSE);
+        for (const int id : {mode_transparent,mode_black}) EnableWindow(GetDlgItem(hwnd,id),FALSE);
         EnableWindow(GetDlgItem(hwnd,refresh),TRUE); SetWindowTextW(GetDlgItem(hwnd,refresh),tr(Text::cancel));
         EnableWindow(tab,FALSE);
         worker = std::thread([this, work] {
@@ -864,6 +1103,8 @@ struct App {
         if (worker.joinable()) worker.join();
         working = false; auto result = std::move(pending);
         for (const auto button : buttons) EnableWindow(button,TRUE);
+        if (aim_control) EnableWindow(aim_control,TRUE);
+        for (const int id : {mode_transparent,mode_black}) EnableWindow(GetDlgItem(hwnd,id),TRUE);
         EnableWindow(tab,TRUE);
         SetWindowTextW(GetDlgItem(hwnd,refresh),tr(Text::refresh));
         if (!result) return;
@@ -934,6 +1175,12 @@ struct App {
             }
             render();
         }
+        if (pending_pick) {
+            const HWND target = pending_pick;
+            pending_pick = nullptr;
+            if (select_window(target)) announce_picked(target);
+            else message(av::text_key(L"pick.not_found", language));
+        }
         if (result->enumeration && result->error) fail(result->error);
         selection_changed();
     }
@@ -1001,10 +1248,10 @@ struct App {
         if (working) { if (id==refresh) { cancel=true; message(tr(Text::cancelling)); } return; }
         switch (id) {
         case refresh: refresh_list(); break;
-        case exclude: protect(av::Mode::exclude); break;
+        case exclude: protect(preferred_mode()); break;
         case blank: protect(av::Mode::blank); break;
         case restore: protect(av::Mode::none); break;
-        case exclude_all: protect(av::Mode::exclude,true); break;
+        case exclude_all: protect(preferred_mode(),true); break;
         case restore_all: protect(av::Mode::none,true); break;
         case effects: {
             const auto targets=selected(); if (targets.empty()) { message(tr(Text::no_selection)); break; }
@@ -1065,6 +1312,13 @@ struct App {
             else message(tr(Text::saved));
             break;
         }
+        case mode_transparent: case mode_black: {
+            if (syncing_mode) break;
+            profile.preferences.auto_mode = id == mode_black ? av::Mode::blank : av::Mode::exclude;
+            persist();
+            sync_mode_checks();
+            break;
+        }
         case settings: show_settings(); break;
         case preferences: open_preferences(); break;
         case select_all: ListView_SetItemState(list, -1, LVIS_SELECTED, LVIS_SELECTED); break;
@@ -1077,7 +1331,7 @@ struct App {
             const auto targets = selected(); if (targets.empty()) { message(tr(Text::no_selection)); break; }
             for (const auto& w : targets) {
                 if (w.path.empty() || w.width < 1 || w.height < 1) { fail(ERROR_ACCESS_DENIED); return; }
-                auto rule = av::remember(w, w.mode == av::Mode::none ? av::Mode::exclude : w.mode);
+                auto rule = av::remember(w, w.mode == av::Mode::none ? preferred_mode() : w.mode);
                 if (const auto* effect=layers.get(w)) { rule.effects=*effect; rule.mode=w.mode; }
                 auto existing = std::find_if(profile.rules.begin(), profile.rules.end(), [&](const av::Rule& item) { return item.path == rule.path && item.class_name == rule.class_name && item.title == rule.title; });
                 if (existing == profile.rules.end()) profile.rules.push_back(rule); else *existing = rule;
@@ -1127,9 +1381,10 @@ struct App {
             metrics.lfMessageFont.lfHeight = -px(12); metrics.lfMessageFont.lfQuality = CLEARTYPE_QUALITY;
             font = CreateFontIndirectW(&metrics.lfMessageFont);
         } else font = CreateFontW(-px(12),0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,L"Segoe UI");
-        for (const auto control : {edit,list,status,tab,GetDlgItem(hwnd,action_group),GetDlgItem(hwnd,profile_group),GetDlgItem(hwnd,batch_group),GetDlgItem(hwnd,selection_summary)}) if (control) SendMessageW(control,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
+        for (const auto control : {edit,list,status,tab,GetDlgItem(hwnd,action_group),GetDlgItem(hwnd,profile_group),GetDlgItem(hwnd,batch_group),GetDlgItem(hwnd,selection_summary),GetDlgItem(hwnd,mode_group),GetDlgItem(hwnd,mode_transparent),GetDlgItem(hwnd,mode_black)}) if (control) SendMessageW(control,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
         for (const auto button : buttons) SendMessageW(button,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);
         if (old_font) DeleteObject(old_font);
+        measure_layout();
         const auto old_images=images; images=ImageList_Create(px(20),px(30),ILC_COLOR24|ILC_MASK,16,16); icon_cache.clear();
         ListView_SetImageList(list,images,LVSIL_SMALL); if (old_images) ImageList_Destroy(old_images);
         av::Window generic; icon_for(generic);
@@ -1149,20 +1404,70 @@ struct App {
         const int widths[] = {290,80,90,110,480};
         for (int i = 0; i < 5; ++i) { LVCOLUMNW col{}; col.mask = LVCF_WIDTH; col.cx = px(widths[i]); ListView_InsertColumn(list, i, &col); }
         status = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFTNOWORDWRAP, 0,0,0,0,hwnd,nullptr,instance,nullptr);
-        for (const int id : {action_group,profile_group,batch_group}) CreateWindowExW(0,L"STATIC",L"",WS_CHILD|WS_VISIBLE|SS_OWNERDRAW,0,0,0,0,hwnd,reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),instance,nullptr);
+        for (const int id : {profile_group,batch_group}) CreateWindowExW(0,L"STATIC",L"",WS_CHILD|WS_VISIBLE|SS_OWNERDRAW,0,0,0,0,hwnd,reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),instance,nullptr);
         CreateWindowExW(0,L"STATIC",L"",WS_CHILD|WS_VISIBLE|SS_LEFTNOWORDWRAP,0,0,0,0,hwnd,reinterpret_cast<HMENU>(selection_summary),instance,nullptr);
-        const int ids[] = {exclude,blank,effects,restore,exclude_all,restore_all,select_all,clear_selection,refresh,remember,apply_rules,geometry,save,load,export_list,settings,about,clear_filter};
+        const int ids[] = {exclude,effects,restore,exclude_all,restore_all,select_all,clear_selection,refresh,remember,apply_rules,geometry,save,load,export_list,settings,about,clear_filter};
         for (const int id : ids) buttons.push_back(CreateWindowExW(0,L"BUTTON",L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON,0,0,0,0,hwnd,reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),instance,nullptr));
+        WNDCLASSEXW aim{sizeof(aim)};
+        aim.lpfnWndProc=aim_control_procedure; aim.hInstance=instance;
+        aim.hCursor=LoadCursorW(nullptr,IDC_HAND);
+        aim.lpszClassName=L"Henglie.AkashaVeil.AimControl";
+        RegisterClassExW(&aim);
+        aim_control=CreateWindowExW(0,aim.lpszClassName,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,
+            0,0,0,0,hwnd,reinterpret_cast<HMENU>(static_cast<INT_PTR>(pick_window)),instance,this);
+        CreateWindowExW(0,L"STATIC",L"",WS_CHILD|WS_VISIBLE|SS_OWNERDRAW,
+            0,0,0,0,hwnd,reinterpret_cast<HMENU>(static_cast<INT_PTR>(mode_group)),instance,nullptr);
+        CreateWindowExW(0,L"BUTTON",L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTORADIOBUTTON|WS_GROUP,
+            0,0,0,0,hwnd,reinterpret_cast<HMENU>(static_cast<INT_PTR>(mode_transparent)),instance,nullptr);
+        CreateWindowExW(0,L"BUTTON",L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTORADIOBUTTON,
+            0,0,0,0,hwnd,reinterpret_cast<HMENU>(static_cast<INT_PTR>(mode_black)),instance,nullptr);
         tips=CreateWindowExW(WS_EX_TOPMOST,TOOLTIPS_CLASSW,nullptr,WS_POPUP|TTS_ALWAYSTIP|TTS_NOPREFIX,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,hwnd,nullptr,instance,nullptr);
         SendMessageW(tips,TTM_SETMAXTIPWIDTH,0,px(360));
-        for (int id : {exclude,blank,effects,restore,exclude_all,restore_all,clear_filter}) {
+        for (int id : {exclude,effects,restore,exclude_all,restore_all,clear_filter}) {
             TOOLINFOW tool{sizeof(tool)}; tool.uFlags=TTF_IDISHWND|TTF_SUBCLASS; tool.hwnd=hwnd; tool.uId=reinterpret_cast<UINT_PTR>(GetDlgItem(hwnd,id)); tool.lpszText=const_cast<wchar_t*>(L"");
+            SendMessageW(tips,TTM_ADDTOOLW,0,reinterpret_cast<LPARAM>(&tool));
+        }
+        if (aim_control) {
+            TOOLINFOW tool{sizeof(tool)}; tool.uFlags=TTF_IDISHWND|TTF_SUBCLASS; tool.hwnd=hwnd; tool.uId=reinterpret_cast<UINT_PTR>(aim_control); tool.lpszText=const_cast<wchar_t*>(L"");
             SendMessageW(tips,TTM_ADDTOOLW,0,reinterpret_cast<LPARAM>(&tool));
         }
         update_fonts();
         tray.initialize(hwnd,tray_event); taskbar_created=RegisterWindowMessageW(L"TaskbarCreated");
         layers.notify_errors(hwnd,layer_problem);
         appearance(); update_runtime(); refresh_list();
+    }
+    void paint_aim(HDC dc) {
+        RECT area{};
+        GetClientRect(aim_control, &area);
+        const HBRUSH back = CreateSolidBrush(bg);
+        FillRect(dc, &area, back);
+        DeleteObject(back);
+        const bool active = picking || aim_hover;
+        const COLORREF ink = active ? profile.accent : fg;
+        const int size = std::min<int>(area.right, area.bottom);
+        const int cx = area.right / 2;
+        const int cy = area.bottom / 2;
+        const int radius = std::max<int>(px(7), size * 25 / 100);
+        const int reach = radius + px(5);
+        const HPEN pen = CreatePen(PS_SOLID, std::max<int>(1, px(active ? 2 : 1)), ink);
+        const auto old_pen = SelectObject(dc, pen);
+        const auto old_brush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+        Ellipse(dc, cx - radius, cy - radius, cx + radius, cy + radius);
+        for (const auto [dx, dy] : {std::pair{0, -1}, std::pair{0, 1}, std::pair{-1, 0}, std::pair{1, 0}}) {
+            MoveToEx(dc, cx + dx * radius, cy + dy * radius, nullptr);
+            LineTo(dc, cx + dx * reach, cy + dy * reach);
+        }
+        const int cross = std::max<int>(px(3), radius - px(6));
+        MoveToEx(dc, cx - cross, cy, nullptr); LineTo(dc, cx + cross, cy);
+        MoveToEx(dc, cx, cy - cross, nullptr); LineTo(dc, cx, cy + cross);
+        const HBRUSH dot = CreateSolidBrush(ink);
+        const auto old_dot = SelectObject(dc, dot);
+        Ellipse(dc, cx - px(2), cy - px(2), cx + px(3), cy + px(3));
+        SelectObject(dc, old_dot);
+        DeleteObject(dot);
+        SelectObject(dc, old_brush);
+        SelectObject(dc, old_pen);
+        DeleteObject(pen);
     }
     void paint_header(HWND header) {
         PAINTSTRUCT p{}; const HDC dc = BeginPaint(header,&p); RECT client{}; GetClientRect(header,&client);
@@ -1188,7 +1493,7 @@ struct App {
         const HPEN pen = CreatePen(PS_SOLID,1,dark ? RGB(65,65,65) : GetSysColor(COLOR_3DSHADOW));
         const auto old = SelectObject(dc,pen), old_brush = SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
         MoveToEx(dc,px(8),r.bottom-px(25),nullptr); LineTo(dc,r.right-px(8),r.bottom-px(25));
-        for (const auto& group : {action_rect,profile_rect}) Rectangle(dc,group.left,group.top+px(8),group.right,group.bottom);
+        for (const auto& group : {profile_rect,mode_rect}) Rectangle(dc,group.left,group.top+px(8),group.right,group.bottom);
         SelectObject(dc,old_brush); SelectObject(dc,old); DeleteObject(pen); EndPaint(hwnd, &p);
     }
     void paint_tabs(HWND control, HDC supplied) {
@@ -1209,6 +1514,85 @@ struct App {
         if (!supplied) EndPaint(control,&paint);
     }
 };
+LRESULT CALLBACK aim_control_procedure(HWND hwnd, UINT message, WPARAM wp, LPARAM lp) {
+    auto* app = reinterpret_cast<App*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+    if (message == WM_NCCREATE) {
+        app = static_cast<App*>(reinterpret_cast<CREATESTRUCTW*>(lp)->lpCreateParams);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(app));
+    }
+    if (!app) return DefWindowProcW(hwnd, message, wp, lp);
+    switch (message) {
+    case WM_ERASEBKGND:
+        return 1;
+    case WM_PAINT: {
+        PAINTSTRUCT paint{};
+        const HDC dc = BeginPaint(hwnd, &paint);
+        app->paint_aim(dc);
+        EndPaint(hwnd, &paint);
+        return 0;
+    }
+    case WM_MOUSEMOVE:
+        if (!app->aim_hover) {
+            app->aim_hover = true;
+            InvalidateRect(hwnd, nullptr, FALSE);
+            TRACKMOUSEEVENT track{sizeof(track), TME_LEAVE, hwnd, 0};
+            TrackMouseEvent(&track);
+        }
+        if (app->picking) app->update_pick();
+        return 0;
+    case WM_MOUSELEAVE:
+        if (app->aim_hover) {
+            app->aim_hover = false;
+            InvalidateRect(hwnd, nullptr, FALSE);
+        }
+        return 0;
+    case WM_LBUTTONDOWN:
+        SetFocus(hwnd);
+        app->begin_pick();
+        if (app->picking) {
+            app->aim_pressed = true;
+            InvalidateRect(hwnd, nullptr, FALSE);
+            SetCapture(hwnd);
+        }
+        return 0;
+    case WM_LBUTTONUP:
+        if (app->picking) {
+            app->update_pick();
+            app->finish_pick();
+            app->aim_pressed = false;
+            if (GetCapture() == hwnd) ReleaseCapture();
+        } else {
+            app->aim_pressed = false;
+        }
+        InvalidateRect(hwnd, nullptr, FALSE);
+        return 0;
+    case WM_CAPTURECHANGED:
+        if (app->picking && app->aim_pressed) app->cancel_pick();
+        app->aim_pressed = false;
+        InvalidateRect(hwnd, nullptr, FALSE);
+        return 0;
+    case WM_SETCURSOR:
+        SetCursor(LoadCursorW(nullptr, app->picking ? IDC_CROSS : IDC_HAND));
+        return TRUE;
+    }
+    return DefWindowProcW(hwnd, message, wp, lp);
+}
+LRESULT CALLBACK pick_overlay_procedure(HWND hwnd, UINT message, WPARAM wp, LPARAM lp) {
+    if (message == WM_NCHITTEST) return HTTRANSPARENT;
+    if (message == WM_ERASEBKGND) return 1;
+    if (message == WM_PAINT) {
+        PAINTSTRUCT paint{};
+        const HDC dc = BeginPaint(hwnd, &paint);
+        RECT area{};
+        GetClientRect(hwnd, &area);
+        const HBRUSH brush = CreateSolidBrush(RGB(230, 96, 58));
+        FillRect(dc, &area, brush);
+        DeleteObject(brush);
+        EndPaint(hwnd, &paint);
+        return 0;
+    }
+    return DefWindowProcW(hwnd, message, wp, lp);
+}
 LRESULT CALLBACK tab_procedure(HWND hwnd, UINT message, WPARAM wp, LPARAM lp, UINT_PTR id, DWORD_PTR data) {
     auto* app=reinterpret_cast<App*>(data);
     if (message == WM_PAINT || message == WM_PRINTCLIENT) { app->paint_tabs(hwnd,message == WM_PRINTCLIENT ? reinterpret_cast<HDC>(wp) : nullptr); return 0; }
@@ -1230,20 +1614,33 @@ LRESULT CALLBACK procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     if (app->taskbar_created && msg==app->taskbar_created) { app->tray.removed_by_shell(); app->update_runtime(); return 0; }
     switch (msg) {
     case WM_CREATE: app->create(); return 0;
-    case WM_TIMER: if (wp==7) app->timer(); else if (wp==8) app->poll_sessions(); return 0;
+    case WM_TIMER:
+        if (wp==7) app->timer();
+        else if (wp==8) app->poll_sessions();
+        return 0;
     case layer_problem: if (wp) app->fail(static_cast<DWORD>(wp)); app->render(); return 0;
     case tray_event:
         if (LOWORD(lp)==NIN_SELECT || LOWORD(lp)==NIN_KEYSELECT || LOWORD(lp)==WM_LBUTTONDBLCLK || LOWORD(lp)==NIN_BALLOONUSERCLICK) app->restore_main();
         else if (LOWORD(lp)==WM_CONTEXTMENU || LOWORD(lp)==WM_RBUTTONUP) app->tray_menu();
         return 0;
-    case WM_SIZE: app->layout(); return 0;
-    case WM_GETMINMAXINFO: reinterpret_cast<MINMAXINFO*>(lp)->ptMinTrackSize = {app->minimum_window_width(),app->px(540)}; return 0;
+    case WM_SIZE:
+        if (wp==SIZE_MINIMIZED) return 0;
+        app->layout();
+        return 0;
+    case WM_ENTERSIZEMOVE:
+        app->in_size_move=true;
+        return 0;
+    case WM_EXITSIZEMOVE:
+        app->in_size_move=false;
+        app->layout();
+        return 0;
+    case WM_GETMINMAXINFO:
+        if (!app->list) break;
+        reinterpret_cast<MINMAXINFO*>(lp)->ptMinTrackSize = app->minimum_window_size(); return 0;
     case WM_MOUSEWHEEL: {
-        if (!app->rtl) break;
         POINT cursor{static_cast<short>(LOWORD(lp)),static_cast<short>(HIWORD(lp))};
         ScreenToClient(hwnd,&cursor);
-        const bool over_side = app->action_rect.right > app->action_rect.left
-            && cursor.x <= app->action_rect.right;
+        const bool over_side = cursor.x >= app->action_rect.left && cursor.x < app->action_rect.right;
         if (!over_side) break;
         const int delta = -GET_WHEEL_DELTA_WPARAM(wp) * app->px(36) / WHEEL_DELTA;
         if (app->scroll_side_buttons(delta)) return 0;
@@ -1252,13 +1649,14 @@ LRESULT CALLBACK procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_SETTINGCHANGE: case WM_THEMECHANGED:
         if (app->list) { app->update_fonts(); app->appearance(); } return 0;
     case WM_DPICHANGED: {
+        if (!app->list) break;
         const UINT old_dpi = app->dpi; app->dpi = HIWORD(wp); app->update_fonts();
         for (int i = 0; i < 5; ++i) ListView_SetColumnWidth(app->list,i,MulDiv(ListView_GetColumnWidth(app->list,i),app->dpi,old_dpi));
         const auto* r = reinterpret_cast<RECT*>(lp);
         int width = r->right - r->left, height = r->bottom - r->top;
         if (app->initial_dpi_pending) {
             app->initial_dpi_pending = false;
-            width = app->px(980); height = app->px(650);
+            width = app->px(980); height = app->px(720);
         } else if (old_dpi == 96 && app->dpi != 96) {
             RECT current{}; GetWindowRect(hwnd, &current);
             width = MulDiv(static_cast<int>(current.right - current.left), static_cast<int>(app->dpi), 96);
@@ -1364,7 +1762,9 @@ LRESULT CALLBACK procedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             if (app->tray.active()) ShowWindow(hwnd,SW_HIDE); else app->fail(ERROR_NOT_READY);
             return 0;
         }
-        KillTimer(hwnd,7); KillTimer(hwnd,8); app->stop_all_sessions(); app->privacy.detach(); app->tray.remove(); app->layers.clear(); app->taskbar.restore_all();
+        KillTimer(hwnd,7); KillTimer(hwnd,8); app->stop_all_sessions();
+        if (app->pick_overlay) { DestroyWindow(app->pick_overlay); app->pick_overlay=nullptr; }
+        app->privacy.detach(); app->tray.remove(); app->layers.clear(); app->taskbar.restore_all();
         app->cancel = true; if (app->worker.joinable()) app->worker.join(); app->pending.reset(); av::cleanup_session_payloads(); DestroyWindow(hwnd); return 0;
     case WM_DESTROY: PostQuitMessage(0); return 0;
     }
@@ -1408,7 +1808,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
         WNDCLASSEXW cls{sizeof(cls)}; cls.lpfnWndProc = procedure; cls.hInstance = instance; cls.hCursor = LoadCursorW(nullptr,IDC_ARROW); cls.lpszClassName = L"Henglie.AkashaVeil.Main";
         cls.hIcon = av::load_app_icon(instance, GetSystemMetrics(SM_CXICON)); cls.hIconSm = av::load_app_icon(instance, GetSystemMetrics(SM_CXSMICON));
         if (RegisterClassExW(&cls)) {
-            const HWND hwnd = CreateWindowExW(WS_EX_CONTROLPARENT,cls.lpszClassName,L"AkashaVeil",WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,app.px(980),app.px(650),nullptr,nullptr,instance,&app);
+            const HWND hwnd = CreateWindowExW(WS_EX_CONTROLPARENT,cls.lpszClassName,L"AkashaVeil",WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,app.px(980),app.px(720),nullptr,nullptr,instance,&app);
             if (hwnd) {
                 app.privacy.attach(hwnd, WM_APP + 50, nullptr, nullptr);
                 ShowWindow(hwnd,show); app.shown=true;
@@ -1420,7 +1820,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
                 }
                 if (actual_dpi != app.dpi) { app.dpi = actual_dpi; app.update_fonts(); app.appearance(); }
                 SetWindowPos(hwnd,nullptr,0,0,MulDiv(980, static_cast<int>(actual_dpi), 96),
-                    MulDiv(650, static_cast<int>(actual_dpi), 96), SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+                    MulDiv(720, static_cast<int>(actual_dpi), 96), SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
                 UpdateWindow(hwnd); if (!loaded) app.fail(error);
                 MSG msg{};
                 while (GetMessageW(&msg,nullptr,0,0) > 0) {
@@ -1438,6 +1838,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
                     }
                     if (msg.message==WM_KEYDOWN && msg.wParam==VK_F1) { app.command(help); continue; }
                     if (msg.message==WM_KEYDOWN && msg.wParam==VK_F5) { app.command(refresh); continue; }
+                    if (msg.message==WM_KEYDOWN && msg.wParam==VK_ESCAPE && app.picking) {
+                        app.cancel_pick();
+                        if (GetCapture()) ReleaseCapture();
+                        continue;
+                    }
                     if (msg.message==WM_KEYDOWN && msg.wParam==VK_ESCAPE && GetFocus()==app.edit) { app.command(clear_filter); continue; }
                     if (!IsDialogMessageW(hwnd,&msg)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
                 }

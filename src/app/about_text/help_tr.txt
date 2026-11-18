@@ -4,7 +4,7 @@ Gelişmiş seçenekler: yakalama içeriği, görünür filigran, gizli filigran,
 
 1. Hızlı başlangıç
 1. Solda pencereler veya süreçler listelenir. Görünümü sekmelerle değiştirin; başlık, süreç adı veya yola göre filtreleyin.
-2. Bir veya daha fazla satır seçin, ardından "Seçilenleri koru" veya "Seçilenleri saydam yap" kullanın. "Seçilenleri geri yükle" bu aracın ayarladığı görüntü ilişkisini geri alır.
+2. Bir veya daha fazla satır seçin, ana pencerenin sağından koruma şemasını belirleyin ve "Seçilenleri koru" düğmesine basın. Farklı bir şemayı uygulamak için bu düğmeye yeniden basın. "Seçilenleri geri yükle" bu aracın ayarladığı görüntü ilişkisini geri alır.
 3. "Tümünü koru" ve "Tümünü geri yükle" geçerli filtrelenmiş sonucun tüm satırlarına uygulanır. Listenin altındaki özet satırları, seçimi ve hedef pencereleri gösterir.
 4. Sıralamak için sütun başlıklarına tıklayın. Liste Ctrl/Shift çoklu seçim, Ctrl+A ve seçimi temizlemeyi destekler.
 5. Kısayollar: Ctrl+H koru; Ctrl+U geri yükle; liste odaktayken Ctrl+A tümünü seç; Ctrl+S profili kaydet; Ctrl+O profil yükle; Ctrl+E listeyi dışa aktar; Ctrl+P tercihler; Ctrl+W Gelişmiş mod; Ctrl+F filtreye odaklan; Ctrl+R veya F5 yenile; Esc filtreyi temizle; F1 bu yardımı açar. Tab/Shift+Tab denetimler arasında gezinir.

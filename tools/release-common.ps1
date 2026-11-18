@@ -42,7 +42,7 @@ function Assert-PublicReleaseSource([string]$Root, [string[]]$Files, $Manifest) 
             if ($relative -match $pattern) { throw "Forbidden public source path: $relative" }
         }
         $path = Join-Path $Root $relative
-        if ([IO.Path]::GetExtension($relative) -in @('.png', '.ico')) { continue }
+        if ([IO.Path]::GetExtension($relative) -in @('.png', '.ico', '.jpg', '.jpeg', '.gif', '.bmp', '.webp')) { continue }
         $text = [IO.File]::ReadAllText($path)
         foreach ($pattern in $Manifest.forbiddenTextPatterns) {
             if ($relative -eq 'tools/release-manifest.json') { continue }

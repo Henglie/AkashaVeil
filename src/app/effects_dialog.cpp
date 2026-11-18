@@ -43,6 +43,23 @@ struct Dialog {
         rect.right=MulDiv(rect.right,84,100);rect.bottom=MulDiv(rect.bottom,84,100);
     }
     bool checked(int id) const { return IsDlgButtonChecked(hwnd,id)==BST_CHECKED; }
+    void set_visible(HWND control,bool visible) {
+        if (!control) return;
+        const bool shown=(GetWindowLongPtrW(control,GWL_STYLE)&WS_VISIBLE)!=0;
+        if (shown!=visible) ShowWindow(control,visible?SW_SHOW:SW_HIDE);
+    }
+    void set_visible(int id,bool visible) { set_visible(GetDlgItem(hwnd,id),visible); }
+    void set_enabled(int id,bool enabled) {
+        const HWND control=GetDlgItem(hwnd,id);
+        if (control && (IsWindowEnabled(control)!=FALSE)!=enabled) EnableWindow(control,enabled);
+    }
+    void sync_visibility() {
+        const int selected=selection(610);
+        set_visible(614,selected==4);
+        set_visible(634,selected==4);
+        set_visible(622,selected>=3);
+        set_visible(629,selected<3);
+    }
     unsigned algorithm() const {
         const int index=selection(624);
         return index<0 ? 0u : static_cast<unsigned>(SendDlgItemMessageW(hwnd,624,CB_GETITEMDATA,index,0));
@@ -89,24 +106,36 @@ struct Dialog {
         for (const auto& entry : entries) if (entry.fixed) fixed_height=std::max(fixed_height,static_cast<int>(entry.base.bottom-entry.base.top));
         content_bottom_=std::max(1,client_height-fixed_height-margin);
         max_scroll_=std::max(0,placement.virtual_height-content_bottom_);
+        const int previous_scroll=scroll_offset;
         scroll_offset=std::clamp(scroll_offset,0,max_scroll_);
+        bool changed=scroll_offset!=previous_scroll;
         for (const auto& entry : entries) {
             if (((entry.id==614 || entry.id==634) && selection(610)!=4)
                 || (entry.id==622 && selection(610)<3) || (entry.id==629 && selection(610)>=3)) {
-                ShowWindow(entry.hwnd,SW_HIDE); continue;
+                set_visible(entry.hwnd,false); continue;
             }
             const int w=entry.base.right-entry.base.left;
             const int h=entry.base.bottom-entry.base.top;
             const int x=rtl ? client_width-(entry.base.left+w) : entry.base.left;
             if (entry.fixed) {
-                SetWindowPos(entry.hwnd,HWND_TOP,x,client_height-h-margin,w,h,SWP_NOACTIVATE);
+                RECT current{}; GetWindowRect(entry.hwnd,&current);
+                MapWindowPoints(nullptr,hwnd,reinterpret_cast<POINT*>(&current),2);
+                const int y=client_height-h-margin;
+                if (current.left!=x || current.top!=y || current.right-current.left!=w || current.bottom-current.top!=h) {
+                    SetWindowPos(entry.hwnd,HWND_TOP,x,y,w,h,SWP_NOACTIVATE); changed=true;
+                }
+                set_visible(entry.hwnd,true);
                 continue;
             }
             const int y=entry.base.top-scroll_offset;
-            if (y+h<=0 || y>=content_bottom_) { ShowWindow(entry.hwnd,SW_HIDE); continue; }
+            if (y+h<=0 || y>=content_bottom_) { set_visible(entry.hwnd,false); continue; }
             const int visible=entry.dropdown ? h : std::max(1,std::min(h,content_bottom_-y));
-            ShowWindow(entry.hwnd,SW_SHOW);
-            SetWindowPos(entry.hwnd,nullptr,x,y,w,visible,SWP_NOZORDER|SWP_NOACTIVATE);
+            set_visible(entry.hwnd,true);
+            RECT current{}; GetWindowRect(entry.hwnd,&current);
+            MapWindowPoints(nullptr,hwnd,reinterpret_cast<POINT*>(&current),2);
+            if (current.left!=x || current.top!=y || current.right-current.left!=w || current.bottom-current.top!=visible) {
+                SetWindowPos(entry.hwnd,nullptr,x,y,w,visible,SWP_NOZORDER|SWP_NOACTIVATE); changed=true;
+            }
         }
         SCROLLINFO info{sizeof(info)};
         info.fMask=SIF_RANGE|SIF_PAGE|SIF_POS;
@@ -116,10 +145,13 @@ struct Dialog {
         SetScrollInfo(hwnd,SB_VERT,&info,TRUE);
         auto style=GetWindowLongPtrW(hwnd,GWL_STYLE);
         const bool need_scroll=max_scroll_>0;
-        style=need_scroll ? (style|WS_VSCROLL) : (style&~static_cast<LONG_PTR>(WS_VSCROLL));
-        SetWindowLongPtrW(hwnd,GWL_STYLE,style);
-        ShowScrollBar(hwnd,SB_VERT,need_scroll);
-        InvalidateRect(hwnd,nullptr,TRUE);
+        if (need_scroll!=(static_cast<bool>(style&WS_VSCROLL))) {
+            style=need_scroll ? (style|WS_VSCROLL) : (style&~static_cast<LONG_PTR>(WS_VSCROLL));
+            SetWindowLongPtrW(hwnd,GWL_STYLE,style);
+            ShowScrollBar(hwnd,SB_VERT,need_scroll);
+            changed=true;
+        }
+        if (changed) InvalidateRect(hwnd,nullptr,scroll_offset!=previous_scroll);
     }
     void scroll_by(int delta) {
         if (!placement.scroll_y || max_scroll_<=0) return;
@@ -191,9 +223,15 @@ struct Dialog {
         return control;
     }
     HWND label(Text key,int x,int y,int width=238) { return make(L"STATIC",0,tr(key),SS_LEFT,x,y,width,12); }
-    void combo(int id,const Text* choices,int count,int x,int y,int width) {
+    void combo_values(int id,const wchar_t* const* choices,int count,int x,int y,int width) {
         HWND control=make(WC_COMBOBOXW,id,L"",CBS_DROPDOWNLIST|WS_TABSTOP,x,y,width,110,true);
-        for (int i=0;i<count;++i) SendMessageW(control,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(tr(choices[i])));
+        for (int i=0;i<count;++i) SendMessageW(control,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(choices[i]));
+    }
+    void combo(int id,const Text* choices,int count,int x,int y,int width) {
+        std::vector<const wchar_t*> values;
+        values.reserve(static_cast<std::size_t>(count));
+        for (int i=0;i<count;++i) values.push_back(tr(choices[i]));
+        combo_values(id,values.data(),count,x,y,width);
     }
     int selection(int id) const { return static_cast<int>(SendDlgItemMessageW(hwnd,id,CB_GETCURSEL,0,0)); }
     void select(int id,int value) { SendDlgItemMessageW(hwnd,id,CB_SETCURSEL,value,0); }
@@ -232,24 +270,22 @@ struct Dialog {
         const bool original=selection(610)==0;
         const bool mark_output=original || selection(610)>=3;
         (void)source;
-        if (!original) CheckDlgButton(hwnd,628,BST_UNCHECKED);
-        if (!mark_output) CheckDlgButton(hwnd,627,BST_UNCHECKED);
+        if (!original && checked(628)) CheckDlgButton(hwnd,628,BST_UNCHECKED);
+        if (!mark_output && checked(627)) CheckDlgButton(hwnd,627,BST_UNCHECKED);
         const bool mark=mark_output && checked(627);
         const bool hidden=original && checked(628);
-        EnableWindow(GetDlgItem(hwnd,627),mark_output);
+        set_enabled(627,mark_output);
         const bool capture_only=selection(612)==1;
-        EnableWindow(GetDlgItem(hwnd,612),mark || hidden);
-        for (int id : {611,613,615,616,617,618,619,621}) EnableWindow(GetDlgItem(hwnd,id),mark);
-        EnableWindow(GetDlgItem(hwnd,614),selection(610)==4);
-        for (int id : {614,634}) ShowWindow(GetDlgItem(hwnd,id),selection(610)==4?SW_SHOW:SW_HIDE);
-        ShowWindow(GetDlgItem(hwnd,622),selection(610)>=3?SW_SHOW:SW_HIDE);
-        ShowWindow(GetDlgItem(hwnd,629),selection(610)<3?SW_SHOW:SW_HIDE);
-        EnableWindow(GetDlgItem(hwnd,623),capture_only && original && (mark || hidden));
-        EnableWindow(GetDlgItem(hwnd,628),original);
-        EnableWindow(GetDlgItem(hwnd,624),hidden);
-        EnableWindow(GetDlgItem(hwnd,625),hidden);
-        EnableWindow(GetDlgItem(hwnd,626),hidden);
-        InvalidateRect(GetDlgItem(hwnd,620),nullptr,FALSE);
+        set_enabled(612,mark || hidden);
+        for (int id : {611,613,615,616,617,618,619,621}) set_enabled(id,mark);
+        set_enabled(614,selection(610)==4);
+        sync_visibility();
+        set_enabled(623,capture_only && original && (mark || hidden));
+        set_enabled(628,original);
+        set_enabled(624,hidden);
+        set_enabled(625,hidden);
+        set_enabled(626,hidden);
+        if (const HWND preview_control=GetDlgItem(hwnd,620)) InvalidateRect(preview_control,nullptr,FALSE);
     }
     void create() {
         ui::use_manual_dialog_dpi(hwnd);
@@ -270,7 +306,8 @@ struct Dialog {
             record(button,id,base,true);
         }
         make(L"BUTTON",630,key(L"effects.base"),BS_GROUPBOX|WS_CLIPSIBLINGS,10,8,594,62);
-        const Text modes[]={Text::original_content,Text::excluded,Text::blanked,Text::solid_cover,Text::label_cover}; combo(610,modes,5,20,30,200);
+        const wchar_t* modes[]={tr(Text::original_content),key(L"mode.transparent"),key(L"mode.black"),tr(Text::solid_cover),tr(Text::label_cover)};
+        combo_values(610,modes,5,20,30,200);
         make(L"STATIC",634,tr(Text::cover_text),SS_LEFT,232,20,250,12); make(L"EDIT",614,effects.label.c_str(),WS_TABSTOP|ES_AUTOHSCROLL,232,38,264,14);
         const auto count=std::wstring(tr(Text::effect_targets))+L": "+std::to_wstring(targets);
         make(L"STATIC",629,count.c_str(),SS_LEFT,232,30,264,14);
@@ -312,7 +349,6 @@ struct Dialog {
         select(623,effects.capture_route==2 ? 1 : 0);
         select(624,effects.hidden_algorithm==1?1:effects.hidden_algorithm==2?2:0);
         updating=false; changed();
-        create_font();
         prepare_layout();
     }
     void preview(DRAWITEMSTRUCT& draw) {

@@ -4,7 +4,7 @@ Advanced options have four groups: capture content, visible watermark, hidden wa
 
 1. Quick start
 1. The left side lists windows or processes. Use the tabs to switch views and the filter box to match title, process name, or path.
-2. Select one or more rows, then use Protect selected or Transparent selected. Restore selected removes the display affinity set by this tool.
+2. Select one or more rows, choose a scheme (Window transparent or Window blacked out) on the right side of the main window, then click Protect selected. Click Protect selected again to apply a different scheme to those windows. Restore selected removes the display affinity set by this tool.
 3. Protect all and Restore all act on every row in the current filtered result. The summary below the list shows rows, selected rows, and target windows.
 4. Click column headers to sort. The list supports Ctrl/Shift multi-selection, Ctrl+A, and clearing the selection.
 5. Shortcuts: Ctrl+H protect; Ctrl+U restore; Ctrl+A select all (list focus); Ctrl+S save profile; Ctrl+O load profile; Ctrl+E export list; Ctrl+P preferences; Ctrl+W advanced mode; Ctrl+F focus the filter; Ctrl+R or F5 refresh; Esc clears the filter; F1 opens this help. Tab/Shift+Tab move focus between controls.
@@ -12,7 +12,7 @@ Advanced options have four groups: capture content, visible watermark, hidden wa
 
 2. Protection modes
 - Protect asks the system to omit the window from supported capture paths. Windows 10 2004 and later provide WDA_EXCLUDEFROMCAPTURE. Windows 7's WDA_MONITOR has different semantics. The UI shows the value read back from the system, not just the requested value.
-- Transparent asks the system to make the window content transparent. The result depends on the Windows version, renderer, and capture backend.
+- Window transparent removes the window from the capture, leaving the background visible. Window blacked out shows a black block instead. Choose the default scheme in the Default protection scheme group on the main window. Results depend on the Windows version, renderer, and capture backend.
 - Restore only reverts display affinity that this tool changed. Unrelated state changed by the target while protected is not overwritten. Operations stop when the target disappears or its identity is reused.
 - Administrator rights: protecting windows of elevated processes usually requires running this tool as administrator. Failures are reported and are not shown as protected.
 - A failed row means the actual operation failed. Check permissions, whether the target still exists, and whether the system supports the selected mode. Retry only affects failed objects.
@@ -21,7 +21,7 @@ Advanced options have four groups: capture content, visible watermark, hidden wa
 1. Select a window and open Advanced mode. Set captured content, watermark style, audience, text, colors, font size, spacing, opacity, and hidden watermark; use the preview before applying.
 2. Captured content:
    - Original content (watermark only): the local screen and captured frames keep the original content, with the watermark drawn according to the selected audience.
-   - Exclude from capture / Transparent: ask the system to remove or make transparent the original content.
+   - Window transparent / Window blacked out: ask the system to hide the original content from the capture.
    - Solid color replacement / Text placeholder: excludes the original and shows a replacement behind the target. This is an experimental desktop-composition path that requires Windows 10 2004 or later, DWM, and an opaque top-level window.
 3. Watermark styles: off, diagonal tiles, centered, bottom-right.
 4. Audience:
